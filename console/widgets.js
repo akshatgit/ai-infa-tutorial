@@ -322,14 +322,16 @@ WIDGETS.kvcache = el => {
         <div class="w-stats">
           <div><b id="kv-work-no">0</b><span>token-steps, no cache</span></div>
           <div><b id="kv-work-yes">0</b><span>token-steps, cached</span></div>
-          <div><b id="kv-mult">1&times;</b><span>extra work avoided</span></div>
+          <div><b id="kv-mult">1&times;</b><span>less work</span></div>
           <div><b id="kv-mem">140</b><span>KiB the cache holds</span></div>
         </div>
 
+        <p class="w-foot" id="kv-math"></p>
         <p class="w-foot">Each bar is one generation step; its width is how many tokens that
-          step had to process. Without a cache the work grows with the square of the length.
-          With one it is flat &mdash; paid for in GPU memory that grows for as long as the
-          request lives.</p>
+          step had to process. The left column is <code>N&middot;P + N(N-1)/2</code> &mdash; the
+          curve with N&sup2; in it. The right column is <code>P + N</code>. The cache is what
+          turns the first into the second, paid for in GPU memory that grows for as long as
+          the request lives.</p>
       </div>
     </div>`;
 
