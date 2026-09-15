@@ -1,0 +1,1004 @@
+<title>Operating LLM Inference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  :root {
+    --ground: #F4F6F7;
+    --surface: #FFFFFF;
+    --surface-2: #E9EEF1;
+    --ink: #101C24;
+    --ink-2: #3C4F5E;
+    --muted: #6A7E8D;
+    --rule: #D6DFE4;
+    --rule-strong: #B9C7D0;
+    --accent: #0B6E77;
+    --accent-ink: #07555C;
+    --accent-soft: #DCEDEF;
+    --ok: #1F7A4D;
+    --warn: #93590A;
+    --crit: #A32B36;
+    --shadow: 0 1px 2px rgba(16, 28, 36, .06), 0 8px 24px -16px rgba(16, 28, 36, .28);
+
+    --f-display: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1218;
+      --surface: #131E26;
+      --surface-2: #1A2932;
+      --ink: #DEE8EE;
+      --ink-2: #A7BAC7;
+      --muted: #78909F;
+      --rule: #21313C;
+      --rule-strong: #2F434F;
+      --accent: #45CBD4;
+      --accent-ink: #7EDDE3;
+      --accent-soft: #10323A;
+      --ok: #46C07E;
+      --warn: #DFA33C;
+      --crit: #EF7078;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0B1218;
+    --surface: #131E26;
+    --surface-2: #1A2932;
+    --ink: #DEE8EE;
+    --ink-2: #A7BAC7;
+    --muted: #78909F;
+    --rule: #21313C;
+    --rule-strong: #2F434F;
+    --accent: #45CBD4;
+    --accent-ink: #7EDDE3;
+    --accent-soft: #10323A;
+    --ok: #46C07E;
+    --warn: #DFA33C;
+    --crit: #EF7078;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-inline: 24px;
+    padding-block: 56px 96px;
+  }
+
+  /* ---------- type ---------- */
+  h1, h2, h3 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.12;
+    text-wrap: balance;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+  h2 { font-size: clamp(1.5rem, 3.2vw, 2rem); }
+  h3 { font-size: 1.1rem; font-weight: 600; }
+  p { margin: 0; }
+
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .lede {
+    font-size: 1.14rem;
+    color: var(--ink-2);
+    max-width: 64ch;
+  }
+  .prose { max-width: 68ch; color: var(--ink-2); }
+  .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+  section { margin-top: 72px; }
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { display: flex; flex-direction: column; gap: 20px; }
+  .title-rule {
+    height: 3px;
+    width: 72px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .promise {
+    font-size: 1.02rem;
+    color: var(--ink-2);
+    border-left: 2px solid var(--accent);
+    padding-left: 16px;
+    max-width: 62ch;
+  }
+  .promise strong { color: var(--ink); font-weight: 600; }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin-top: 4px;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: .74rem;
+    letter-spacing: .04em;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 5px 9px;
+  }
+
+  /* ---------- rig panel ---------- */
+  .rig {
+    margin-top: 36px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .rig-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+  }
+  .rig-bar .eyebrow { color: var(--ink-2); }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--f-mono);
+    font-size: .74rem;
+    color: var(--ok);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ok);
+  }
+  .rig-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .rig-cell {
+    padding: 14px 18px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .rig-cell:last-child { border-right: none; }
+  .rig-k {
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .rig-v {
+    font-family: var(--f-mono);
+    font-size: .92rem;
+    font-weight: 500;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .rig-note {
+    padding: 12px 18px;
+    font-size: .86rem;
+    color: var(--muted);
+  }
+  .rig-note code {
+    font-family: var(--f-mono);
+    font-size: .84em;
+    color: var(--ink-2);
+  }
+
+  /* ---------- bridge table ---------- */
+  .table-scroll { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .94rem;
+    min-width: 540px;
+  }
+  th {
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 16px 10px 0;
+    border-bottom: 1px solid var(--rule-strong);
+    font-weight: 500;
+  }
+  td {
+    padding: 13px 16px 13px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  td:first-child { color: var(--muted); width: 38%; }
+  td:last-child { color: var(--ink); font-weight: 500; padding-right: 0; }
+  tr:last-child td { border-bottom: none; }
+
+  table.measured td:first-child { color: var(--accent); font-family: var(--f-mono); width: auto; font-weight: 500; }
+  table.measured td { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 400; }
+  table.measured td:last-child { color: var(--ink); font-weight: 500; }
+  table.measured tbody tr:last-child td { color: var(--ink); }
+  .readnote {
+    margin-top: 16px;
+    font-size: .92rem;
+    color: var(--ink-2);
+    max-width: 70ch;
+    border-left: 2px solid var(--accent);
+    padding-left: 15px;
+  }
+  .readnote b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- calculator ---------- */
+  .calc {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .calc-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 18px;
+    padding: 20px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-2);
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  select, input[type="number"] {
+    font-family: var(--f-mono);
+    font-size: .88rem;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  select:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .range-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .range-val {
+    font-family: var(--f-mono);
+    font-size: .88rem;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .calc-out { padding: 20px; }
+
+  .budget {
+    display: flex;
+    height: 34px;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--rule-strong);
+    background: var(--surface-2);
+  }
+  .budget div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    color: #fff;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: width .18s ease;
+  }
+  .b-weights { background: #3D6A8F; }
+  .b-act { background: #7C6191; }
+  .b-kv { background: var(--accent); color: var(--surface) !important; }
+  .b-free {
+    background: repeating-linear-gradient(135deg, transparent, transparent 5px, var(--rule) 5px, var(--rule) 10px);
+    color: var(--muted) !important;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-top: 14px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--f-mono);
+    font-size: .76rem;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .sw { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+
+  .readout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    margin-top: 22px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .readout > div {
+    background: var(--surface);
+    padding: 14px 16px;
+  }
+  .r-k {
+    font-family: var(--f-mono);
+    font-size: .66rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .r-v {
+    font-family: var(--f-mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .r-v.bad { color: var(--crit); }
+  .r-v.warn { color: var(--warn); }
+  .r-sub {
+    font-family: var(--f-mono);
+    font-size: .7rem;
+    color: var(--muted);
+    display: block;
+    margin-top: 3px;
+  }
+
+  .verdict {
+    margin-top: 18px;
+    padding: 13px 16px;
+    border-radius: 3px;
+    font-size: .9rem;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+  .verdict.bad { border-left-color: var(--crit); background: color-mix(in srgb, var(--crit) 12%, transparent); }
+  .verdict.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+
+  .validated {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--rule-strong);
+  }
+  .validated .eyebrow { display: block; margin-bottom: 8px; }
+  .validated p { font-size: .88rem; color: var(--ink-2); max-width: 62ch; }
+  .vgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .v-k {
+    display: block;
+    font-family: var(--f-mono);
+    font-size: .66rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .v-v {
+    font-family: var(--f-mono);
+    font-size: .92rem;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- weeks ---------- */
+  .weeks { display: flex; flex-direction: column; gap: 1px; background: var(--rule); border-block: 1px solid var(--rule); }
+  .week {
+    background: var(--ground);
+    display: grid;
+    grid-template-columns: 52px 1fr 1fr;
+    gap: 24px;
+    padding: 22px 0;
+  }
+  .wk-n {
+    font-family: var(--f-mono);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    padding-top: 2px;
+  }
+  .wk-topic h3 { margin-bottom: 7px; }
+  .wk-topic p, .wk-lab p { font-size: .9rem; color: var(--ink-2); }
+  .wk-lab {
+    border-left: 1px solid var(--rule);
+    padding-left: 24px;
+  }
+  .wk-lab .eyebrow { color: var(--muted); display: block; margin-bottom: 7px; }
+  .wk-rig {
+    font-family: var(--f-mono);
+    font-size: .7rem;
+    color: var(--muted);
+    margin-top: 9px;
+    display: block;
+  }
+  .wk-rig b { color: var(--accent); font-weight: 500; }
+
+  /* ---------- columns ---------- */
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 32px;
+  }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  ul.tight { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
+  ul.tight li { color: var(--ink-2); font-size: .93rem; }
+  ul.none { list-style: none; padding-left: 0; }
+  ul.none li {
+    padding-left: 20px;
+    position: relative;
+  }
+  ul.none li::before {
+    content: "×";
+    position: absolute;
+    left: 2px;
+    color: var(--crit);
+    font-family: var(--f-mono);
+  }
+
+  .grade {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .grade-row { display: flex; flex-direction: column; gap: 5px; }
+  .grade-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    font-size: .92rem;
+  }
+  .grade-top b { font-family: var(--f-mono); color: var(--accent); font-weight: 600; }
+  .bar {
+    height: 5px;
+    background: var(--surface-2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+
+  .exam {
+    margin-top: 28px;
+    padding: 22px 24px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+  }
+  .exam p:first-child { font-size: .8rem; }
+  .exam q {
+    display: block;
+    margin-top: 8px;
+    font-family: var(--f-display);
+    font-size: clamp(1.15rem, 2.6vw, 1.5rem);
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.3;
+    quotes: none;
+  }
+
+  footer {
+    margin-top: 80px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: .76rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    justify-content: space-between;
+  }
+
+  @media (max-width: 720px) {
+    .week { grid-template-columns: 40px 1fr; gap: 14px; }
+    .wk-lab { grid-column: 2; border-left: none; padding-left: 0; padding-top: 14px; border-top: 1px solid var(--rule); }
+    .wrap { padding-block: 40px 64px; }
+    section { margin-top: 56px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Eight weeks &middot; ~40 hours &middot; for experienced SREs</p>
+    <h1>Operating LLM Inference</h1>
+    <div class="title-rule"></div>
+    <p class="promise">Take an SRE from <strong>&ldquo;I can operate Kubernetes&rdquo;</strong> to <strong>&ldquo;I can explain, benchmark, scale, and debug a GPU-backed inference service.&rdquo;</strong></p>
+    <p class="lede">This is not MLOps. It is production inference infrastructure, taught on one coherent stack, on real hardware, with every lab producing a measurement you have to defend.</p>
+    <div class="meta-row">
+      <span class="chip">75-min lecture</span>
+      <span class="chip">90-min lab</span>
+      <span class="chip">2–3 h investigation</span>
+      <span class="chip">No ML degree required</span>
+      <span class="chip">Prereq: Linux · k8s · Prometheus</span>
+      <span class="chip">8/8 modules written</span>
+    </div>
+  </header>
+
+  <div class="rig">
+    <div class="rig-bar">
+      <span class="eyebrow">The rig — every lab runs here</span>
+      <span class="status"><span class="dot"></span>gpu1 · provisioned</span>
+    </div>
+    <div class="rig-grid">
+      <div class="rig-cell"><span class="rig-k">Accelerator</span><span class="rig-v">NVIDIA L4</span></div>
+      <div class="rig-cell"><span class="rig-k">VRAM</span><span class="rig-v">24 GB GDDR6</span></div>
+      <div class="rig-cell"><span class="rig-k">Compute cap</span><span class="rig-v">sm_89 · bf16</span></div>
+      <div class="rig-cell"><span class="rig-k">Silicon</span><span class="rig-v">AD104GL</span></div>
+      <div class="rig-cell"><span class="rig-k">Host</span><span class="rig-v">gx3-16x80x1l4</span></div>
+      <div class="rig-cell"><span class="rig-k">vCPU / RAM</span><span class="rig-v">16 / 78 GiB</span></div>
+      <div class="rig-cell"><span class="rig-k">OS</span><span class="rig-v">Debian 13</span></div>
+      <div class="rig-cell"><span class="rig-k">Kernel</span><span class="rig-v">6.12.107</span></div>
+      <div class="rig-cell"><span class="rig-k">Driver</span><span class="rig-v">615.71.09</span></div>
+      <div class="rig-cell"><span class="rig-k">CUDA</span><span class="rig-v">13.4</span></div>
+      <div class="rig-cell"><span class="rig-k">Reported VRAM</span><span class="rig-v">23034 MiB</span></div>
+    </div>
+    <p class="rig-note">A VM with GPU passthrough and root — not a notebook. That distinction is the whole reason Weeks 4 and 8 exist: you cannot load <code>nvidia.ko</code>, run the GPU Operator, or injure a driver you do not own.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">The bridge</p>
+      <h2>Everything here has an SRE analogue</h2>
+      <p class="prose">Students already know the left column. The course&rsquo;s entire pedagogical bet is that the right column is learnable as a translation, not as a new discipline.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>You already operate this</th><th>Its inference equivalent</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Heap and page cache</td><td>Model weights and KV cache in VRAM</td></tr>
+          <tr><td>QPS and request latency</td><td>Input/output tokens, TTFT, inter-token latency</td></tr>
+          <tr><td>CPU-based HPA</td><td>Queue-depth and KV-cache-aware scaling</td></tr>
+          <tr><td>Stateless load balancing</td><td>Prefix-cache-aware and model-aware routing</td></tr>
+          <tr><td>Process crash</td><td>CUDA OOM, XID error, collective hang</td></tr>
+          <tr><td>Rolling deployment</td><td>Multi-GB model loading and GPU cold starts</td></tr>
+          <tr><td>Node capacity</td><td>GPU type, VRAM, topology and interconnect</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Week 2 instrument</p>
+      <h2>VRAM accounting</h2>
+      <p class="prose">The Week 2 lab is: predict the memory, run it, then explain the gap between prediction and measurement. This is the predictor. Numbers are for the L4 above — 24 GB nominal, ~22.5 GiB addressable once the driver takes its cut.</p>
+    </div>
+
+    <div class="calc">
+      <div class="calc-controls">
+        <div class="field">
+          <label for="model">Model</label>
+          <select id="model"></select>
+        </div>
+        <div class="field">
+          <label for="dtype">Weight precision</label>
+          <select id="dtype">
+            <option value="2">bf16 / fp16 — 2 bytes</option>
+            <option value="1">fp8 — 1 byte</option>
+            <option value="0.5">int4 AWQ / GPTQ — 0.5 bytes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="util">gpu_memory_utilization</label>
+          <div class="range-row">
+            <input type="range" id="util" min="0.70" max="0.98" step="0.01" value="0.90">
+            <span class="range-val" id="utilVal">0.90</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="seqlen">Tokens per sequence</label>
+          <div class="range-row">
+            <input type="range" id="seqlen" min="512" max="32768" step="512" value="2048">
+            <span class="range-val" id="seqVal">2048</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="calc-out">
+        <div class="budget" id="budget"></div>
+        <div class="legend" id="legend"></div>
+
+        <div class="readout">
+          <div><span class="r-k">KV cache/token</span><span class="r-v" id="kvtok">—</span><span class="r-sub" id="kvtokSub">&nbsp;</span></div>
+          <div><span class="r-k">KV budget</span><span class="r-v" id="kvbud">—</span><span class="r-sub">after weights &amp; workspace</span></div>
+          <div><span class="r-k">Total KV tokens</span><span class="r-v" id="kvtotal">—</span><span class="r-sub">vLLM blocks, all sequences</span></div>
+          <div><span class="r-k">Concurrent seqs</span><span class="r-v" id="conc">—</span><span class="r-sub" id="concSub">at full context</span></div>
+        </div>
+
+        <div class="verdict" id="verdict"></div>
+
+        <div class="validated">
+          <span class="eyebrow">Validated against the rig</span>
+          <p>These are not textbook constants. Both the addressable VRAM and the workspace
+          overhead were measured by serving Qwen2.5&nbsp;1.5B on <span class="mono">gpu1</span>
+          and reading what vLLM actually allocated.</p>
+          <div class="vgrid">
+            <div><span class="v-k">vLLM reported</span><span class="v-v">578,000 tokens · 141.11&times;</span></div>
+            <div><span class="v-k">This calculator</span><span class="v-v">578,051 tokens · 141.13&times;</span></div>
+            <div><span class="v-k">Error</span><span class="v-v">0.01%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Week 1 measurement</p>
+      <h2>Which number moved</h2>
+      <p class="prose">Run on <span class="mono">gpu1</span> against Qwen2.5&nbsp;1.5B, 96 output tokens.
+      Students produce this table themselves, then answer one question from it: do replicas help?</p>
+    </div>
+
+    <div class="table-scroll">
+      <table class="measured">
+        <thead>
+          <tr><th>Concurrency</th><th>TTFT p50</th><th>TTFT p95</th><th>ITL p50</th><th>Throughput</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>19.5 ms</td><td>19.5 ms</td><td>13.2 ms</td><td>74 tok/s</td></tr>
+          <tr><td>8</td><td>42.4 ms</td><td>44.8 ms</td><td>13.5 ms</td><td>573 tok/s</td></tr>
+          <tr><td>32</td><td>62.0 ms</td><td>77.6 ms</td><td>15.2 ms</td><td>1,992 tok/s</td></tr>
+          <tr><td>64</td><td>102.6 ms</td><td>122.5 ms</td><td>16.6 ms</td><td>3,581 tok/s</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="readnote"><b>64&times; the load bought 48&times; the throughput.</b> TTFT rose 5.3&times;;
+    ITL rose 1.25&times;. The time went into <em>queueing</em>, not decoding — so replicas help here and
+    a bigger GPU does not. Answering that from the table, rather than from intuition, is the skill
+    the whole course is built to produce.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Week 3 measurement</p>
+      <h2>The knee is a config default</h2>
+      <p class="prose">Sweep concurrency until throughput stops scaling. Students predict the
+      limiting resource first; almost all of them say VRAM or GPU compute.</p>
+    </div>
+
+    <div class="table-scroll">
+      <table class="measured">
+        <thead>
+          <tr><th>Concurrency</th><th>TTFT p50</th><th>TTFT p95</th><th>Throughput</th><th>Waiting</th><th>KV used</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>19.9 ms</td><td>19.9 ms</td><td>61 tok/s</td><td>0</td><td>0.0%</td></tr>
+          <tr><td>64</td><td>125.1 ms</td><td>169.1 ms</td><td>3,117 tok/s</td><td>0</td><td>0.0%</td></tr>
+          <tr><td>128</td><td>204.7 ms</td><td>339.6 ms</td><td>4,306 tok/s</td><td>0</td><td>0.0%</td></tr>
+          <tr><td>256</td><td>430.1 ms</td><td>606.5 ms</td><td>6,680 tok/s</td><td>0</td><td>2.7%</td></tr>
+          <tr><td>384</td><td>642.6 ms</td><td>2,802 ms</td><td>5,891 tok/s</td><td>128</td><td>3.6%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="readnote"><b>Throughput falls past the knee.</b> Concurrency 256 &rarr; 384 buys
+    4.6&times; the tail latency to <em>lose</em> 12% of throughput. Under sustained load the
+    engine pins at exactly <span class="mono">256</span> running with 144 queued — vLLM's
+    default <span class="mono">max_num_seqs</span> — while the KV cache sits at
+    <b>9.3% used</b>. Over 90% of the memory budgeted in Week&nbsp;2 is idle at saturation.
+    The bottleneck is not the GPU, not the KV cache, but a config default nobody set.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Syllabus</p>
+      <h2>Eight weeks, one stack</h2>
+      <p class="prose">CUDA → vLLM → Kubernetes → NVIDIA GPU Operator/DCGM → Prometheus → KServe. One stack taught to depth beats ten frameworks taught to a demo.</p>
+    </div>
+
+    <div class="weeks" id="weeks"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Capstone</p>
+      <h2>The output is evidence, not a chatbot</h2>
+      <p class="prose">Students pick a real open problem in vLLM, llm-d, KServe or the GPU Operator. Even when the patch is not merged, a minimal reproducer and a defensible analysis are real engineering output — and they are exactly the signal AI-infrastructure interviews currently find missing.</p>
+    </div>
+    <div class="cols">
+      <div class="stack">
+        <h3>Every capstone ships</h3>
+        <ul class="tight">
+          <li>A reproducible workload or failure</li>
+          <li>Measurements and a stated hypothesis</li>
+          <li>Root-cause analysis</li>
+          <li>A test, patch, controller or instrumentation change</li>
+          <li>A runbook</li>
+          <li>An upstream issue or pull request</li>
+          <li>A technical blog post</li>
+        </ul>
+      </div>
+      <div class="stack">
+        <h3>Viable subjects</h3>
+        <ul class="tight">
+          <li>Missing or misleading CUDA-graph metrics</li>
+          <li>GPU-memory attribution across sleep/wake</li>
+          <li>Warm-capacity semantics in an inference autoscaler</li>
+          <li>Per-request inference-time accuracy</li>
+          <li>GPU kernel and model-cache supply-chain integrity</li>
+          <li>Reproducing and detecting a distributed inference hang</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Assessment</p>
+      <h2>Almost no multiple choice</h2>
+    </div>
+    <div class="cols">
+      <div class="grade">
+        <div class="grade-row">
+          <div class="grade-top"><span>Upstream-quality capstone</span><b>35%</b></div>
+          <div class="bar"><i style="width:35%"></i></div>
+        </div>
+        <div class="grade-row">
+          <div class="grade-top"><span>Reproducible laboratories</span><b>25%</b></div>
+          <div class="bar"><i style="width:25%"></i></div>
+        </div>
+        <div class="grade-row">
+          <div class="grade-top"><span>Incident diagnosis and postmortem</span><b>25%</b></div>
+          <div class="bar"><i style="width:25%"></i></div>
+        </div>
+        <div class="grade-row">
+          <div class="grade-top"><span>Capacity-planning exercise</span><b>15%</b></div>
+          <div class="bar"><i style="width:15%"></i></div>
+        </div>
+      </div>
+      <div class="stack">
+        <h3>Explicitly not in this course</h3>
+        <ul class="tight none">
+          <li>Prompt engineering</li>
+          <li>&ldquo;Build a RAG chatbot&rdquo;</li>
+          <li>Calling an API from LangChain</li>
+          <li>Generic Kubernetes or Terraform tutorials</li>
+          <li>Ten inference frameworks taught superficially</li>
+          <li>Dashboard screenshots with no failure hypothesis</li>
+          <li>CUDA kernel optimization before the serving system</li>
+          <li>Transformer mathematics unrelated to operations</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="exam">
+      <p class="eyebrow">The real exam</p>
+      <q>The service is violating its TTFT SLO. Show me where the time and the GPU memory went.</q>
+    </div>
+  </section>
+
+  <footer>
+    <span>Operating LLM Inference · v1 syllabus</span>
+    <span>gpu1 · IBM Cloud VPC · L4 24 GB · sm_89</span>
+  </footer>
+</div>
+
+<script>
+  // ---- model specs. KV/token = 2 (K,V) * layers * kv_heads * head_dim * bytes ----
+  const MODELS = [
+    { id: "qwen25-1_5b", name: "Qwen2.5 1.5B Instruct", params: 1.5437e9, layers: 28, kvHeads: 2,  headDim: 128, note: "GQA 12\u21922 \u00b7 running on gpu1" },
+    { id: "llama31-8b",  name: "Llama 3.1 8B Instruct", params: 8.03e9, layers: 32, kvHeads: 8,  headDim: 128, note: "GQA 32→8" },
+    { id: "qwen25-7b",   name: "Qwen2.5 7B Instruct",   params: 7.62e9, layers: 28, kvHeads: 4,  headDim: 128, note: "GQA 28→4" },
+    { id: "mistral-7b",  name: "Mistral 7B v0.3",       params: 7.25e9, layers: 32, kvHeads: 8,  headDim: 128, note: "GQA 32→8" },
+    { id: "llama32-3b",  name: "Llama 3.2 3B Instruct", params: 3.21e9, layers: 28, kvHeads: 8,  headDim: 128, note: "GQA 24→8" },
+    { id: "phi3-mini",   name: "Phi-3-mini 3.8B",       params: 3.82e9, layers: 32, kvHeads: 32, headDim: 96,  note: "no GQA — full MHA" },
+    { id: "gemma2-9b",   name: "Gemma 2 9B",            params: 9.24e9, layers: 42, kvHeads: 8,  headDim: 256, note: "GQA 16→8, wide heads" }
+  ];
+
+  const GIB = 1024 ** 3;
+  // Both constants are MEASURED on gpu1, not assumed. vLLM 0.29.0 serving
+  // Qwen2.5-1.5B at --gpu-memory-utilization 0.90 reported "Available KV cache
+  // memory: 15.43 GiB" and "GPU KV cache size: 578,000 tokens"; the workspace
+  // figure is what is left once weights and that KV budget are subtracted.
+  const VRAM_TOTAL = 22.49;     // GiB — nvidia-smi reports 23034 MiB, not 24576
+  const WORKSPACE  = 1.93;      // GiB — activations, CUDA graphs, JIT kernels, fragmentation
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n, d = 1) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const int = (n) => Math.round(n).toLocaleString("en-US");
+
+  const sel = $("model");
+  MODELS.forEach(m => {
+    const o = document.createElement("option");
+    o.value = m.id;
+    o.textContent = m.name;
+    sel.appendChild(o);
+  });
+
+  function compute() {
+    const m = MODELS.find(x => x.id === sel.value);
+    const bytes = parseFloat($("dtype").value);
+    const util = parseFloat($("util").value);
+    const seqlen = parseInt($("seqlen").value, 10);
+
+    $("utilVal").textContent = util.toFixed(2);
+    $("seqVal").textContent = int(seqlen);
+
+    const pool     = VRAM_TOTAL * util;                       // what vLLM will claim
+    const weights  = (m.params * bytes) / GIB;
+    const kvPerTok = 2 * m.layers * m.kvHeads * m.headDim * 2; // bytes, KV always fp16 here
+    const kvBudget = pool - weights - WORKSPACE;
+    const kvTokens = kvBudget > 0 ? (kvBudget * GIB) / kvPerTok : 0;
+    const conc     = kvTokens / seqlen;
+
+    // ---- budget bar, drawn against the full 22.5 GiB card ----
+    const seg = (cls, gib, label) => {
+      const pct = Math.max(0, (gib / VRAM_TOTAL) * 100);
+      return pct < 0.4 ? "" :
+        `<div class="${cls}" style="width:${pct}%">${pct > 11 ? label : ""}</div>`;
+    };
+    const kvShown = Math.max(0, kvBudget);
+    const free = Math.max(0, VRAM_TOTAL - weights - WORKSPACE - kvShown);
+    $("budget").innerHTML =
+      seg("b-weights", weights, "weights") +
+      seg("b-act", WORKSPACE, "workspace") +
+      seg("b-kv", kvShown, "KV cache") +
+      seg("b-free", free, "unclaimed");
+
+    $("legend").innerHTML = [
+      ["#3D6A8F", "weights", weights],
+      ["#7C6191", "workspace", WORKSPACE],
+      ["var(--accent)", "KV cache", kvShown],
+      ["var(--rule)", "unclaimed", free]
+    ].map(([c, k, v]) =>
+      `<span><i class="sw" style="background:${c}"></i>${k} ${fmt(v)} GiB</span>`
+    ).join("");
+
+    // ---- readouts ----
+    $("kvtok").textContent = fmt(kvPerTok / 1024, 0) + " KiB";
+    $("kvtokSub").textContent = m.note;
+    $("kvbud").textContent = fmt(kvBudget) + " GiB";
+    $("kvbud").className = "r-v" + (kvBudget <= 0 ? " bad" : kvBudget < 2 ? " warn" : "");
+    $("kvtotal").textContent = kvTokens >= 1000 ? fmt(kvTokens / 1000, 1) + "K" : int(kvTokens);
+    $("conc").textContent = conc >= 1 ? int(conc) : conc > 0 ? conc.toFixed(1) : "0";
+    $("conc").className = "r-v" + (conc < 1 ? " bad" : conc < 8 ? " warn" : "");
+    $("concSub").textContent = `at ${int(seqlen)} tokens each`;
+
+    // ---- verdict ----
+    const v = $("verdict");
+    if (kvBudget <= 0) {
+      v.className = "verdict bad";
+      v.innerHTML = `<b>Will not load.</b> Weights alone need ${fmt(weights)} GiB and vLLM is only claiming ${fmt(pool)} GiB. This is the CUDA OOM students meet in Week 8 — quantize, raise <code class="mono">gpu_memory_utilization</code>, or pick a smaller model.`;
+    } else if (conc < 1) {
+      v.className = "verdict bad";
+      v.innerHTML = `<b>Cannot serve one sequence at this length.</b> The KV budget holds ${int(kvTokens)} tokens but you asked for ${int(seqlen)}. vLLM will refuse the request or preempt endlessly.`;
+    } else if (conc < 8) {
+      v.className = "verdict warn";
+      v.innerHTML = `<b>Batch of ${int(conc)}.</b> Continuous batching has almost nothing to batch, so throughput collapses toward single-stream and the queue does the waiting. Watch <code class="mono">vllm:num_requests_waiting</code> climb under load — that is the Week 6 autoscaling signal, and it moves long before GPU utilization does.`;
+    } else {
+      v.className = "verdict";
+      v.innerHTML = `<b>Batch of ${int(conc)} at ${int(seqlen)} tokens.</b> Healthy headroom for continuous batching. Push the sequence length up and watch the batch — and therefore throughput — fall off a cliff. That cliff, not GPU utilization, is what capacity planning in Week 6 is actually about.`;
+    }
+  }
+
+  ["model", "dtype", "util", "seqlen"].forEach(id =>
+    $(id).addEventListener("input", compute)
+  );
+
+  // ---- syllabus ----
+  const WEEKS = [
+    { n: "01", t: "An inference request",
+      d: "Tokenization, prefill, decode, continuous batching, streamed responses. Why a token is not a request and a request is not a unit of work.",
+      l: "Load-test vLLM and separate queue time, TTFT, decode time and inter-token latency into four numbers you can defend.",
+      r: "L4 · bare vLLM, no k8s" },
+    { n: "02", t: "GPU systems for operators",
+      d: "SMs and warps at a useful level, CUDA processes, VRAM, memory bandwidth, PCIe and NVLink, topology.",
+      l: "Predict model and KV-cache memory with the instrument above, run it, then explain the difference between prediction and measurement.",
+      r: "L4 · bare vLLM" },
+    { n: "03", t: "Inside an inference engine",
+      d: "The scheduler, PagedAttention, KV blocks, preemption, prefix caching, CUDA graphs.",
+      l: "Instrument vLLM and find the saturation point across prompt lengths and concurrency levels.",
+      r: "L4 · bare vLLM" },
+    { n: "04", t: "Kubernetes GPU platform",
+      d: "Drivers, container toolkit, device plugin, GPU Operator, placement, MIG, model downloads.",
+      l: "Provision a GPU node from bare OS, deploy vLLM, then deliberately break the driver, the runtime or the scheduler and diagnose it.",
+      r: "L4 · fresh box, k3s + GPU Operator" },
+    { n: "05", t: "AI-specific observability",
+      d: "TTFT, inter-token latency, tokens/sec, queue depth, cache utilization, preemptions, DCGM telemetry.",
+      l: "Build an SLO dashboard and prove every alert fires by injecting the failure it claims to detect.",
+      r: "L4 · k3s + Prometheus + DCGM" },
+    { n: "06", t: "Capacity and autoscaling",
+      d: "Workload characterization, concurrency limits, admission control, warm capacity, cold starts.",
+      l: "Compare CPU-based scaling against queue-depth and KV-cache scaling, then write the controller or policy that wins.",
+      r: "L4 · k3s + KServe" },
+    { n: "07", t: "Distributed inference",
+      d: "Tensor parallelism, collectives, NCCL, topology sensitivity, multi-node serving, prefill/decode separation.",
+      l: "Compare one- and two-GPU execution, then diagnose a worker failure or a communication stall that never returns.",
+      r: "2× L4 · gx3-32x160x2l4" },
+    { n: "08", t: "Reliability and security",
+      d: "CUDA OOM, XID errors, node drain, stuck workers, model and kernel cache integrity, multitenancy.",
+      l: "Run a timed incident, write the postmortem, then harden the component that failed.",
+      r: "L4 · k3s, full stack" }
+  ];
+
+  $("weeks").innerHTML = WEEKS.map(w => `
+    <div class="week">
+      <div class="wk-n">${w.n}</div>
+      <div class="wk-topic">
+        <h3>${w.t}</h3>
+        <p>${w.d}</p>
+      </div>
+      <div class="wk-lab">
+        <span class="eyebrow">Guided lab</span>
+        <p>${w.l}</p>
+        <span class="wk-rig">runs on <b>${w.r}</b></span>
+      </div>
+    </div>`).join("");
+
+  sel.value = "llama31-8b";
+  compute();
+</script>
