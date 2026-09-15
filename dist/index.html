@@ -1,0 +1,1288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground:#F4F6F7; --surface:#FFFFFF; --surface-2:#E9EEF1;
+    --ink:#101C24; --ink-2:#3C4F5E; --muted:#6A7E8D;
+    --rule:#D6DFE4; --rule-strong:#B9C7D0;
+    --accent:#0B6E77;
+    --s1:#008B9E; --s2:#B25E00; --s3:#6E4B9E;
+    --ok:#1F7A4D; --warn:#93590A; --crit:#A32B36;
+    --grid:#E4EAEE;
+    --f-display:"IBM Plex Sans Condensed","Helvetica Neue",Arial,sans-serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0B1218; --surface:#131E26; --surface-2:#1A2932;
+      --ink:#DEE8EE; --ink-2:#A7BAC7; --muted:#78909F;
+      --rule:#21313C; --rule-strong:#2F434F;
+      --accent:#45CBD4;
+      --s1:#16A2B4; --s2:#C97520; --s3:#8E6FD0;
+      --ok:#46C07E; --warn:#DFA33C; --crit:#EF7078;
+      --grid:#1E2C36;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0B1218; --surface:#131E26; --surface-2:#1A2932;
+    --ink:#DEE8EE; --ink-2:#A7BAC7; --muted:#78909F;
+    --rule:#21313C; --rule-strong:#2F434F;
+    --accent:#45CBD4;
+    --s1:#16A2B4; --s2:#C97520; --s3:#8E6FD0;
+    --ok:#46C07E; --warn:#DFA33C; --crit:#EF7078;
+    --grid:#1E2C36;
+  }
+
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:var(--f-body); font-size:15px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1240px; margin:0 auto; padding-inline:20px; padding-block:28px 72px; }
+
+  /* ---- engine strip, on every page ---- */
+
+  /* ---- course home ---- */
+  .hero {
+    background:var(--surface); border:1px solid var(--rule); border-radius:4px;
+    padding:26px 28px; margin-bottom:22px;
+  }
+  .hero h2 { font-size:1.45rem; margin-bottom:10px; }
+  .hero p { color:var(--ink-2); max-width:64ch; margin:0 0 16px; }
+  .progress { display:flex; gap:5px; margin:18px 0 8px; }
+  .progress i {
+    flex:1; height:5px; border-radius:3px; background:var(--surface-2);
+  }
+  .progress i.on { background:var(--accent); }
+  .prog-label { font-family:var(--f-mono); font-size:.72rem; color:var(--muted); }
+
+  .steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
+  .step {
+    background:var(--surface); border:1px solid var(--rule);
+    border-radius:4px; padding:15px 16px;
+  }
+  .step .num {
+    font-family:var(--f-mono); font-size:.7rem; color:var(--accent);
+    letter-spacing:.1em; display:block; margin-bottom:6px;
+  }
+  .step h3 { font-size:.95rem; margin:0 0 6px; }
+  .step p { font-size:.85rem; color:var(--ink-2); margin:0; }
+  .step code {
+    display:block; font-family:var(--f-mono); font-size:.78rem; margin-top:9px;
+    background:var(--surface-2); padding:6px 8px; border-radius:3px; color:var(--ink);
+    overflow-x:auto;
+  }
+
+  /* ---- shell ---- */
+  .shell { display:grid; grid-template-columns:232px 1fr; gap:32px; align-items:start; }
+  @media (max-width:900px) { .shell { grid-template-columns:1fr; gap:20px; } }
+
+  nav { position:sticky; top:20px; display:flex; flex-direction:column; gap:2px; }
+  @media (max-width:900px) { nav { position:static; } }
+  nav .navhead {
+    font-family:var(--f-mono); font-size:.64rem; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted); padding:0 10px 8px;
+  }
+  nav a {
+    display:flex; align-items:baseline; gap:9px; padding:7px 10px;
+    border-radius:3px; text-decoration:none; color:var(--ink-2);
+    font-size:.87rem; border-left:2px solid transparent;
+  }
+  nav a:hover { background:var(--surface-2); }
+  nav a.on { background:var(--surface-2); color:var(--ink); border-left-color:var(--accent); font-weight:500; }
+  nav a .wk {
+    font-family:var(--f-mono); font-size:.72rem; color:var(--muted); flex:none; min-width:16px;
+  }
+  nav a.on .wk { color:var(--accent); }
+  nav a.soon { color:var(--muted); }
+  nav a .tick { margin-left:auto; color:var(--ok); font-size:.8rem; }
+  nav .sep { height:1px; background:var(--rule); margin:10px 0; }
+
+  /* ---- rendered lab markdown ---- */
+  .md { font-size:.94rem; color:var(--ink-2); }
+  .md h1 { font-family:var(--f-display); font-size:1.5rem; color:var(--ink); margin:0 0 14px; }
+  .md h2 {
+    font-family:var(--f-display); font-size:1.15rem; color:var(--ink);
+    margin:30px 0 10px; padding-bottom:7px; border-bottom:1px solid var(--rule);
+  }
+  .md h3 { font-family:var(--f-display); font-size:1rem; color:var(--ink); margin:22px 0 7px; }
+  .md p { margin:0 0 12px; max-width:72ch; }
+  .md ul, .md ol { margin:0 0 12px; padding-left:20px; max-width:72ch; }
+  .md li { margin-bottom:5px; }
+  .md strong { color:var(--ink); font-weight:600; }
+  .md code {
+    font-family:var(--f-mono); font-size:.86em; background:var(--surface-2);
+    padding:1px 5px; border-radius:3px; color:var(--ink);
+  }
+  .md pre {
+    background:var(--surface-2); border:1px solid var(--rule); border-radius:4px;
+    padding:13px 15px; overflow-x:auto; margin:0 0 14px;
+  }
+  .md pre code { background:none; padding:0; font-size:.82rem; line-height:1.5; }
+  .md blockquote {
+    margin:0 0 14px; padding:10px 15px; border-left:3px solid var(--accent);
+    background:color-mix(in srgb, var(--accent) 7%, transparent); border-radius:0 3px 3px 0;
+  }
+  .md blockquote p:last-child { margin:0; }
+  .md table { min-width:0; margin-bottom:14px; }
+  .md th { text-align:left; padding:0 14px 8px 0; }
+  .md td { text-align:left; padding:8px 14px 8px 0; color:var(--ink-2); font-family:inherit; }
+  .md td:first-child { color:var(--ink-2); }
+  .md p.refs {
+    font-size:.85rem; color:var(--muted); max-width:78ch;
+    background:var(--surface); border:1px solid var(--rule);
+    border-left:2px solid var(--accent);
+    border-radius:0 3px 3px 0; padding:10px 14px; margin:0 0 14px;
+  }
+  .md p.refs strong { color:var(--ink-2); font-weight:600; }
+  .md p.refs a { color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent); }
+  .md p.refs a:hover { border-bottom-color:var(--accent); }
+
+  .md hr { border:none; border-top:1px solid var(--rule); margin:26px 0; }
+  .md a { color:var(--accent); }
+
+  .tabs {
+    display:flex; gap:4px; margin-bottom:20px;
+    border-bottom:1px solid var(--rule);
+  }
+  .tab {
+    background:none; border:none; border-bottom:2px solid transparent;
+    color:var(--muted); font-family:var(--f-body); font-size:.88rem; font-weight:500;
+    padding:8px 14px; cursor:pointer; border-radius:0;
+  }
+  .tab:hover { color:var(--ink-2); }
+  .tab.on { color:var(--ink); border-bottom-color:var(--accent); }
+
+  /* ---- prediction ritual ---- */
+  .predict {
+    background:var(--surface); border:1px solid var(--rule);
+    border-left:3px solid var(--s2); border-radius:4px; padding:16px 18px; margin-bottom:22px;
+  }
+  .predict p.q { font-size:.95rem; color:var(--ink); margin:6px 0 12px; max-width:66ch; }
+  .predict .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .predict input { min-width:220px; flex:1; }
+  .predict .locked {
+    font-family:var(--f-mono); font-size:.9rem; color:var(--ink);
+    background:var(--surface-2); border:1px solid var(--rule); border-radius:3px; padding:7px 10px;
+  }
+  .predict .hint { font-size:.82rem; color:var(--muted); margin-top:9px; }
+
+  .needs {
+    display:inline-block; font-family:var(--f-mono); font-size:.66rem;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--warn);
+    border:1px solid var(--warn); border-radius:3px; padding:3px 7px; margin-left:8px;
+  }
+
+  h1,h2 { font-family:var(--f-display); font-weight:700; margin:0; line-height:1.15; letter-spacing:-.01em; }
+  h1 { font-size:1.6rem; }
+  h2 { font-size:1.1rem; }
+  .eyebrow {
+    font-family:var(--f-mono); font-size:.68rem; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--muted); margin:0;
+  }
+
+  header.top {
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap:16px; flex-wrap:wrap; padding-bottom:16px; margin-bottom:24px;
+    border-bottom:1px solid var(--rule);
+  }
+
+  /* ---- stat tiles: the five numbers that matter ---- */
+
+  /* ---- panels ---- */
+  .panel {
+    background:var(--surface); border:1px solid var(--rule);
+    border-radius:4px; overflow:hidden; margin-bottom:22px;
+  }
+  .panel-head {
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    flex-wrap:wrap; padding:11px 16px; background:var(--surface-2);
+    border-bottom:1px solid var(--rule);
+  }
+  .panel-body { padding:16px; }
+  figure { margin:0; }
+
+  /* ---- readout tiles (used by the lab runners) ---- */
+  .readout {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:1px; background:var(--rule); border:1px solid var(--rule);
+    border-radius:3px; overflow:hidden;
+  }
+  .readout > div { background:var(--surface); padding:13px 15px; }
+  .r-k {
+    display:block; font-family:var(--f-mono); font-size:.64rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:4px;
+  }
+  .r-v {
+    display:block; font-family:var(--f-mono); font-size:1.4rem; font-weight:600;
+    line-height:1.1; font-variant-numeric:tabular-nums; color:var(--ink);
+  }
+  .r-v.hot { color:var(--warn); }
+  .r-v.bad { color:var(--crit); }
+  .r-sub {
+    display:block; font-family:var(--f-mono); font-size:.66rem;
+    color:var(--muted); margin-top:3px;
+  }
+
+  /* ---- Week 0 widgets ---- */
+  .w {
+    background:var(--surface); border:1px solid var(--rule); border-radius:4px;
+    overflow:hidden; margin:0 0 20px;
+  }
+  .w-head {
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    padding:10px 15px; background:var(--surface-2); border-bottom:1px solid var(--rule);
+  }
+  .w-title { font-family:var(--f-display); font-weight:700; font-size:.98rem; color:var(--ink); }
+  .w-note { font-family:var(--f-mono); font-size:.68rem; color:var(--muted); }
+  .w-body { padding:15px; }
+  .w-sub {
+    font-family:var(--f-mono); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 8px;
+  }
+  .w-foot { font-size:.83rem; color:var(--muted); margin:13px 0 0; max-width:72ch; }
+  .w-foot code { font-family:var(--f-mono); font-size:.9em; }
+
+  .w textarea {
+    width:100%; font-family:var(--f-mono); font-size:.85rem; line-height:1.5;
+    color:var(--ink); background:var(--surface); border:1px solid var(--rule-strong);
+    border-radius:3px; padding:9px 11px; resize:vertical;
+  }
+  .w textarea:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
+  .chips { display:flex; flex-wrap:wrap; gap:3px; margin-top:12px; }
+  .chip {
+    font-family:var(--f-mono); font-size:.8rem; padding:3px 6px; border-radius:3px;
+    white-space:pre; border:1px solid transparent;
+  }
+  .chip.c0 { background:color-mix(in srgb,var(--s1) 16%,transparent); }
+  .chip.c1 { background:color-mix(in srgb,var(--s2) 16%,transparent); }
+  .chip.c2 { background:color-mix(in srgb,var(--accent) 14%,transparent); }
+  .chip.c3 { background:color-mix(in srgb,var(--s1) 26%,transparent); }
+  .chip.c4 { background:color-mix(in srgb,var(--s2) 26%,transparent); }
+  .chip.c5 { background:color-mix(in srgb,var(--accent) 24%,transparent); }
+  .chip.prompt { background:var(--surface-2); color:var(--ink-2); }
+  .chip.gen { background:color-mix(in srgb,var(--s1) 20%,transparent); color:var(--ink); }
+  .chip.gen.new { border-color:var(--s1); }
+
+  .ctx { display:flex; flex-wrap:wrap; gap:3px; align-items:center; min-height:56px; }
+  .caret {
+    display:inline-block; width:2px; height:15px; background:var(--accent);
+    animation:blink 1s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity:0; } }
+  @media (prefers-reduced-motion: reduce) { .caret { animation:none; } }
+
+  .w-stats {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(115px,1fr)); gap:1px;
+    margin-top:14px; background:var(--rule); border:1px solid var(--rule);
+    border-radius:3px; overflow:hidden;
+  }
+  .w-stats > div { background:var(--surface); padding:10px 12px; }
+  .w-stats b {
+    display:block; font-family:var(--f-mono); font-size:1.15rem; font-weight:600;
+    color:var(--ink); font-variant-numeric:tabular-nums; line-height:1.2;
+  }
+  .w-stats span {
+    display:block; font-family:var(--f-mono); font-size:.63rem; letter-spacing:.06em;
+    color:var(--muted); margin-top:2px;
+  }
+
+  .lanes { display:flex; flex-direction:column; gap:3px; }
+  .lane { display:flex; align-items:center; gap:9px; }
+  .lane-id, .lane-n {
+    font-family:var(--f-mono); font-size:.72rem; color:var(--muted);
+    flex:none; width:16px; text-align:center;
+  }
+  .lane-n { color:var(--ink-2); text-align:right; }
+  .track { display:flex; gap:2px; flex:1; }
+  .track i {
+    flex:1; height:15px; border-radius:2px; background:var(--surface-2);
+  }
+  .track i.wait { background:color-mix(in srgb,var(--muted) 22%,transparent); }
+  .track i.busy.s1 { background:var(--s2); }
+  .track i.busy.s2 { background:var(--s1); }
+
+  .w-explain { font-size:.88rem; color:var(--ink-2); margin:0 0 12px; max-width:72ch; }
+  .w-explain b { color:var(--ink); }
+  .w-cap { font-size:.82rem; color:var(--muted); margin:7px 0 0; }
+  .w-cap b { color:var(--ink); font-family:var(--f-mono); }
+  .kv-legend { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:12px; }
+  .kv-legend span {
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:var(--f-mono); font-size:.7rem; color:var(--ink-2);
+  }
+  .kv-legend .sw {
+    width:13px; height:13px; border-radius:2px; flex:none; background:var(--surface-2);
+  }
+  .kv-legend .sw.busy.s1 { background:var(--s2); }
+  .kv-legend .sw.wait { background:color-mix(in srgb,var(--muted) 22%,transparent); }
+
+  .kvgrid { display:flex; flex-direction:column; gap:1px; }
+  .kvrow { display:flex; gap:1px; }
+  .kvrow i {
+    flex:1; height:3px; border-radius:1px; background:var(--surface-2);
+    transition:background .15s ease;
+  }
+  .kvrow i.kvp { background:color-mix(in srgb,var(--muted) 45%,transparent); }
+  .kvrow i.kvg { background:var(--s1); }
+  .kvrow i.fresh { background:var(--accent); }
+  .kv-legend .sw.kvp { background:color-mix(in srgb,var(--muted) 45%,transparent); }
+  .kv-legend .sw.kvg { background:var(--s1); }
+
+  .kv-cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px; margin-top:16px; }
+  .kv-bars { display:flex; flex-direction:column; gap:1px; }
+  .kvb {
+    height:4px; border-radius:2px; background:var(--surface-2);
+    min-width:2px; transition:background .12s ease;
+  }
+  .kvb.no.on { background:var(--s2); }
+  .kvb.yes.on { background:var(--s1); }
+  .w-range {
+    font-family:var(--f-mono); font-size:.9rem; color:var(--accent);
+    font-variant-numeric:tabular-nums; padding:7px 0;
+  }
+  .w input[type="range"] { accent-color:var(--accent); padding:0; border:none; background:none; }
+
+  /* ---- controls ---- */
+  .ctl { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field label {
+    font-family:var(--f-mono); font-size:.64rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  input, select {
+    font-family:var(--f-mono); font-size:.84rem; color:var(--ink);
+    background:var(--surface); border:1px solid var(--rule-strong);
+    border-radius:3px; padding:7px 9px; min-width:110px;
+  }
+  button {
+    font-family:var(--f-body); font-size:.86rem; font-weight:600;
+    color:var(--surface); background:var(--accent);
+    border:1px solid var(--accent); border-radius:3px;
+    padding:8px 16px; cursor:pointer;
+  }
+  button.ghost { background:transparent; color:var(--ink-2); border-color:var(--rule-strong); }
+  button[disabled] { opacity:.5; cursor:not-allowed; }
+  button:focus-visible, input:focus-visible, select:focus-visible {
+    outline:2px solid var(--accent); outline-offset:1px;
+  }
+
+  table { width:100%; border-collapse:collapse; font-size:.84rem; min-width:560px; }
+  .tscroll { overflow-x:auto; }
+  th {
+    font-family:var(--f-mono); font-size:.64rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted); text-align:right; font-weight:500;
+    padding:0 0 8px 14px; border-bottom:1px solid var(--rule-strong);
+  }
+  th:first-child, td:first-child { text-align:left; padding-left:0; }
+  td {
+    font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--ink-2);
+    text-align:right; padding:8px 0 8px 14px; border-bottom:1px solid var(--rule);
+  }
+  td:first-child { color:var(--s1); font-weight:500; }
+
+  .verdict {
+    margin-top:16px; padding:12px 15px; border-radius:3px; font-size:.9rem;
+    border-left:3px solid var(--s1); background:color-mix(in srgb, var(--s1) 9%, transparent);
+  }
+  .verdict b { color:var(--ink); }
+  .note { font-size:.84rem; color:var(--muted); margin-top:10px; }
+  .note code { font-family:var(--f-mono); font-size:.9em; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+  @media (max-width:560px) { .wrap { padding-block:20px 48px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <p class="eyebrow">AI infrastructure for SREs</p>
+      <h1 id="pagetitle">Operating LLM Inference</h1>
+    </div>
+    <div class="sub" id="reposub"></div>
+  </header>
+
+  <div class="shell">
+    <nav id="nav"></nav>
+    <main>
+      <div class="predict" id="predict" hidden>
+        <p class="eyebrow">Predict first</p>
+        <p class="q" id="predict-q"></p>
+        <div class="row" id="predict-row"></div>
+        <p class="hint">Writing it down before you measure is the point. You cannot
+          un-see the answer, and a prediction you never committed to is one you will
+          always claim you had.</p>
+      </div>
+      <div id="tool"></div>
+      <div class="md" id="body"></div>
+    </main>
+  </div>
+</div>
+<script>window.__COURSE__ = {"weeks": [{"n": 0, "slug": "lab00-primer", "title": "What you are actually operating", "needs": "just read it", "tool": null, "predict": null, "available": true}, {"n": 1, "slug": "lab01-request-anatomy", "title": "Anatomy of a request", "needs": "1 GPU", "tool": null, "predict": "At 64 concurrent requests, how many times higher will TTFT be than at 1? And inter-token latency?", "available": true}, {"n": 2, "slug": "lab02-vram", "title": "VRAM accounting", "needs": "1 GPU", "tool": "vram", "predict": "How many tokens of KV cache will fit? Work it out before you run anything.", "available": false}, {"n": 3, "slug": "lab03-knee", "title": "Inside an inference engine", "needs": "1 GPU", "tool": null, "predict": "Which resource will stop you first — VRAM, GPU compute, or something else?", "available": false}, {"n": 4, "slug": "lab04-k8s-gpu", "title": "Kubernetes GPU platform", "needs": "1 GPU, root", "tool": null, "predict": "How many distinct failures will you hit going from bare OS to a working CUDA device?", "available": false}, {"n": 5, "slug": "lab05-observability", "title": "AI-specific observability", "needs": "1 GPU + k3s", "tool": "alerts", "predict": "Which signal moves first when the service degrades — TTFT, GPU utilization, or queue depth?", "available": false}, {"n": 6, "slug": "lab06-autoscaling", "title": "Capacity and autoscaling", "needs": "1 GPU + k3s", "tool": null, "predict": "How long does a replica take to go from scheduled to serving?", "available": false}, {"n": 7, "slug": "lab07-tensor-parallel", "title": "Distributed inference", "needs": "2 GPUs", "tool": null, "predict": "Will tensor parallelism across 2 GPUs give 2x throughput? If not, what fraction?", "available": false}, {"n": 8, "slug": "lab08-incident", "title": "Reliability and security", "needs": "1 GPU", "tool": "faults", "predict": "Which failure mode returns HTTP 200 for its entire duration?", "available": false}], "labs_repo": "ai-tutorial-labs", "detail": {"0": {"n": 0, "slug": "lab00-primer", "title": "What you are actually operating", "needs": "just read it", "tool": null, "predict": null, "markdown": "# Week 0 — What you are actually operating\n\n**Needs:** nothing, just read it · **Time:** 25 min\n\nYou have operated web services. You have never operated a model server. This\npage closes that gap. No mathematics, no machine learning — just what the thing\nis, what it does with a request, and what the words mean.\n\nRead it once before Week 1. Everything after this assumes it.\n\n---\n\nThis primer is in four short parts. Read them in order; each takes about five\nminutes.\n\n1. **[The model, and the loop](01-the-loop.md)** — What a language model actually does with your text, and what a token is.\n2. **[The KV cache](02-kv-cache.md)** — The memory every request holds, why it exists, and why you run out of it.\n3. **[Why you need a server](03-why-a-server.md)** — Inference versus training, what an inference server is for, and what vLLM is.\n4. **[The request, and the words](04-the-request.md)** — What a call looks like on the wire, every abbreviation defined, and the mental model.\n\nNothing here needs hardware. When you are done, go to\n[Week 1](../lab01-request-anatomy/), which takes one request apart on a real GPU.\n", "docs": {}, "parts": [{"file": "01-the-loop.md", "title": "The model, and the loop", "markdown": "# The model, and the loop\n\n*What a language model actually does with your text, and what a token is.*\n\n## 1. What is a large language model, operationally?\n\nForget the training and the mathematics. **A large language model is a function\nthat takes some text and predicts the single most likely next word.** That is\nthe whole of it.\n\n```\n\"The capital of France is\"   ->   \" Paris\"\n```\n\nTo produce a sentence, you call it again with its own output appended:\n\n```\n\"The capital of France is\"          ->  \" Paris\"\n\"The capital of France is Paris\"    ->  \",\"\n\"The capital of France is Paris,\"   ->  \" a\"\n...\n```\n\nThat loop is why an LLM answer *streams* in word by word instead of arriving at\nonce. It is not a UI effect. The server genuinely does not have the third word\nuntil it has computed the second.\n\n\u003c!-- widget:loop -->\n\n**Two operational consequences, and they drive the whole course:**\n\n1. One request is not one unit of work. It is one expensive first step plus N\n   cheap repeated steps, where N is however long the answer turns out to be.\n   You do not know N in advance.\n2. The loop is *sequential*. You cannot parallelize a single answer. You can\n   only run many answers at the same time.\n\n**Go deeper:** [Karpathy — Intro to Large Language Models](https://www.youtube.com/watch?v=zjkBMFhNj_g) (1 h video, no maths, the best general explanation there is) · [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) (pictures, not equations — read it if you want to know what is inside the box)\n\n## 2. What is a token?\n\nThe model does not work on words or characters. It works on **tokens** —\nsub-word chunks from a fixed vocabulary of typically 30,000–150,000 entries.\n\n```\n\"unbelievable\"  ->  [\"un\", \"bel\", \"iev\", \"able\"]     4 tokens\n\"cat\"           ->  [\"cat\"]                          1 token\n\"  \"            ->  [\"  \"]                           1 token\n```\n\nA rough rule for English: **1 token ≈ 0.75 words ≈ 4 characters.** Type into\nthe box below and watch the split change — try a common word, then a rare one,\nthen a URL.\n\n\u003c!-- widget:tokenizer -->\n\nTokens are the unit of everything here — billing, throughput, memory, context\nlimits. When this course says \"throughput,\" it means **tokens per second**, not\nrequests per second, because one request can be 20 tokens or 20,000.\n\n**Go deeper:** [Karpathy — Let's build the GPT tokenizer](https://www.youtube.com/watch?v=zduSFxRajkE) (2 h, builds one from scratch; watch the first 20 minutes) · [Hugging Face — tokenizer summary](https://huggingface.co/docs/transformers/en/tokenizer_summary) (what BPE, WordPiece and SentencePiece actually differ on) · [OpenAI tokenizer playground](https://platform.openai.com/tokenizer) (paste text, see a real vocabulary split it)\n"}, {"file": "02-kv-cache.md", "title": "The KV cache", "markdown": "# The KV cache\n\n*The memory every request holds, why it exists, and why you run out of it.*\n\n## 1. The KV cache — the thing you will actually run out of\n\n### Why the model re-reads everything\n\nHere is the part that is easy to miss: **the model has no memory between calls.**\nIt is a pure function. You hand it a sequence of tokens, it hands back one token.\nNothing is carried over to the next call.\n\n```\nf(\"The capital of France is\")        ->  \" Paris\"\nf(\"The capital of France is Paris\")  ->  \",\"\nf(\"The capital of France is Paris,\") ->  \" a\"\n```\n\nLook at what goes *in* each time. To produce the second token, the model is\nhanded the prompt **plus** the token it just produced. To produce the third, the\nprompt plus two tokens. Every call is a complete pass over the entire sequence\nfrom the beginning, because that sequence is the only thing the model knows.\n\nSo the work per step grows:\n\n| Step | What the model processes | Tokens |\n|---|---|---|\n| 1 | `The capital of France is` | 5 |\n| 2 | `The capital of France is Paris` | 6 |\n| 3 | `The capital of France is Paris,` | 7 |\n| 4 | `The capital of France is Paris, a` | 8 |\n\n### The arithmetic\n\nTake a prompt of **P** tokens and generate **N** tokens. Step *i* processes\n`P + i` tokens, so the total is:\n\n```\ntotal = P + (P+1) + (P+2) + ... + (P+N-1)\n      = N·P  +  (0 + 1 + 2 + ... + N-1)\n      = N·P  +  N(N-1)/2\n```\n\nThat second term is the problem. It contains **N²**.\n\nWith a 5-token prompt generating 500 tokens:\n\n```\ntotal = 500 x 5  +  500 x 499 / 2\n      = 2,500    +  124,750\n      = 127,250 token-steps\n```\n\n**127,250 token-steps to produce 500 tokens** — about 255 times more work than\nthe 500 you might have expected. Double the answer length and the work\nquadruples. This does not scale, and no amount of faster hardware fixes a curve\nwith an N² in it.\n\n### Why we can avoid it\n\nNow the useful observation. When the model processes token 3, it computes two\nsmall vectors for it — by convention the **key** and the **value**. Those\nvectors depend on token 3 and the tokens *before* it. They do not depend on\ntokens that come after, because the model only ever looks backwards.\n\nSo when token 6 arrives, **what the model computed for token 3 has not\nchanged**. Recomputing it produces exactly the same numbers as last time.\n\nThat means you can compute it once and keep it. That store is the **KV cache**.\n\n```\nwithout a cache:  total = N·P + N(N-1)/2        grows with N²\nwith a cache:     total = P + N                 grows with N\n```\n\nSame example, with the cache:\n\n```\ntotal = 5 (the prompt, once)  +  500 (one new token per step)\n      = 505 token-steps\n```\n\n**127,250 becomes 505.** Same answer, 252 times less work. Press the button\nbelow and watch the two shapes diverge — then drag the slider to 200 tokens.\n\n\u003c!-- widget:kvcache -->\n\nThe left column is that N² curve. The right column is what caching buys you.\n\n### What it costs\n\nYou have traded compute for memory — and the memory is on the GPU, where it is\nscarce and expensive.\n\nWork out the price for one token. The model stores a key and a value **for every\nlayer**, because each layer does its own attention:\n\n| | Qwen2.5-1.5B | why |\n|---|---|---|\n| key and value | **× 2** | two vectors per token |\n| layers | **× 28** | every layer caches separately |\n| KV heads | **× 2** | how many attention heads share a cache entry |\n| head dimension | **× 128** | the size of one vector |\n| bytes per number | **× 2** | the cache is kept in fp16 |\n\nMultiply those together: `2 × 28 × 2 × 128 × 2` = **28,672 bytes**, or\n**28 KiB for a single token**.\n\nThat number is small. The problem is what it multiplies by:\n\n| | tokens | KV cache |\n|---|---|---|\n| One short answer | 200 | 5.5 MiB |\n| One long conversation | 2,000 | **55 MiB** |\n| Ten of those at once | 20,000 | **548 MiB** |\n| A hundred at once | 200,000 | **5.4 GiB** |\n| A thousand at once | 2,000,000 | **54 GiB** — will not fit |\n\nA 24 GB card sounds roomy until you subtract the model weights (about 3 GB for\nthis model, 16 GB for an 8B one) and realise the rest is divided between however\nmany conversations you are holding open.\n\n**This is the resource you run out of — not compute.** Week 2 is entirely about\npredicting this number before it bites you, and the calculator there does this\narithmetic for any model you point it at.\n\n### Three consequences worth carrying forward\n\n**It grows while the request runs.** Unlike a normal server, where a request's\nmemory footprint is roughly known at accept time, an inference request's\nfootprint grows every step and you do not know the final size in advance.\n\n**`GQA` (grouped query attention) exists to shrink it.** Look at the formula:\n`kv_heads` is a direct multiplier. A model with 32 KV heads has a KV cache\nsixteen times larger than an otherwise identical model with 2. This is why\nPhi-3-mini, at 3.8B parameters, has a *bigger* cache than Llama 3.1 at 8B.\n\n**When it fills, the server evicts.** vLLM throws away a running request's cache\nand recomputes it later — a **preemption**. The request does not fail. It\nreturns HTTP 200. It just silently does its work twice, and you see it only as\nlatency. Week 8 is partly about learning to spot exactly this.\n\n### The analogy that works\n\nModel weights are like a program's resident memory: fixed size, loaded once,\nshared by everyone. The KV cache is like the **page cache**: it takes whatever\nis left over, it makes everything fast when it fits, and when it does not, the\nsystem starts evicting and throughput falls off a cliff.\n\nThe difference is what eviction means. When Linux drops a page, it re-reads it\nfrom disk. When vLLM preempts a sequence, it **recomputes** it — the same work,\ndone a second time.\n\n**Go deeper:** [Efficient Memory Management for LLM Serving with PagedAttention](https://arxiv.org/abs/2309.06180) (the vLLM paper — sections 1–4 need no ML background, and the virtual-memory analogy is made explicitly) · [vLLM's own introduction to PagedAttention](https://blog.vllm.ai/2023/06/20/vllm.html) (the short version, with diagrams) · [GQA: training generalized multi-query transformer models](https://arxiv.org/abs/2305.13245) (why `kv_heads` is usually much smaller than the attention head count) · [Hugging Face — KV cache quantization](https://huggingface.co/blog/kv-cache-quantization) (what it costs to store the cache in fewer bytes)\n"}, {"file": "03-why-a-server.md", "title": "Why you need a server", "markdown": "# Why you need a server\n\n*Inference versus training, what an inference server is for, and what vLLM is.*\n\n## 1. Inference vs training\n\n| | Training | Inference |\n|---|---|---|\n| What it does | Creates the model | Uses the model |\n| Runs | once, for weeks | constantly, for years |\n| Hardware | hundreds of GPUs | one or a few GPUs |\n| Who operates it | research teams | **you** |\n\n**This course is entirely about inference.** You will never train anything. The\nmodel file is a fixed input, like a container image.\n\n**Go deeper:** [NVIDIA — mastering LLM techniques: inference optimization](https://developer.nvidia.com/blog/mastering-llm-techniques-inference-optimization/) (a solid survey of where inference time actually goes)\n\n## 2. What is model \"serving\", and why not just run Python?\n\nYou *could* load a model in a Python script and call it. People do, and it works\nfor one user at a time. It falls apart in production for reasons that will feel\nfamiliar:\n\n- **No batching.** The GPU can process many requests at once for barely more\n  cost than one, but a naive script does them one at a time — wasting most of\n  the hardware you are paying for.\n- **No memory management.** Each in-flight request needs scratch memory\n  proportional to its length. Allocate it naively and you run out, or you\n  reserve for the worst case and waste most of the card.\n- **No queueing or admission control.** Nothing decides what to do when 500\n  requests arrive at once.\n\nAn **inference server** is the thing that solves those problems. It is the\nequivalent of putting nginx and a connection pool in front of a CGI script.\n\n\u003c!-- widget:batching -->\n\n**Go deeper:** [Anyscale — how continuous batching enables 23x throughput](https://www.anyscale.com/blog/continuous-batching-llm-inference) (the clearest explanation of batching every step versus a batch window, with measurements) · [Orca: a distributed serving system for transformer-based models](https://www.usenix.org/conference/osdi22/presentation/yu) (the OSDI paper that introduced continuous batching)\n\n## 3. What is vLLM?\n\n**vLLM is the inference server this course uses.** It is open source, it is the\nmost widely deployed option, and it exposes exactly the operational signals this\ncourse is about.\n\nThink of it as the application server for a model:\n\n| Your world | This world |\n|---|---|\n| nginx / gunicorn | **vLLM** |\n| your application code | the **model weights** (a few GB of numbers) |\n| a worker process | a **sequence** being decoded |\n| worker pool size | `max_num_seqs` |\n| `/metrics` on your app | `/metrics` on vLLM — same Prometheus format |\n\nYou start it roughly like any other daemon:\n\n```bash\nvllm serve Qwen/Qwen2.5-1.5B-Instruct --port 8000\n```\n\nIt downloads the model, loads it onto the GPU, and listens on port 8000 with an\nHTTP API. You do not need to understand the model to operate the server, exactly\nas you do not need to read an application's source to run it behind nginx.\n\nThere are alternatives — TGI, TensorRT-LLM, SGLang, llama.cpp. The operational\nconcepts transfer; the flag names do not. This course teaches one stack to\ndepth rather than five to a demo.\n\n**Go deeper:** [vLLM quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) (10 minutes, the official introduction) · [vLLM supported models](https://docs.vllm.ai/en/latest/models/supported_models.html) (check before you pick one) · [vLLM on GitHub](https://github.com/vllm-project/vllm) (the source, and where you will file your capstone issue) · [Baseten — a guide to LLM inference and performance](https://www.baseten.co/blog/llm-transformer-inference-guide/) (the best single source on why prefill is compute-bound and decode is memory-bandwidth-bound)\n"}, {"file": "04-the-request.md", "title": "The request, and the words", "markdown": "# The request, and the words\n\n*What a call looks like on the wire, every abbreviation defined, and the mental model.*\n\n## 1. What does a request look like?\n\nvLLM speaks the OpenAI API format, which has become the de-facto standard. It is\nordinary HTTP with a JSON body:\n\n```bash\ncurl http://localhost:8000/v1/chat/completions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"model\": \"Qwen/Qwen2.5-1.5B-Instruct\",\n    \"messages\": [{\"role\": \"user\", \"content\": \"What is a page cache?\"}],\n    \"max_tokens\": 100,\n    \"stream\": true\n  }'\n```\n\n`\"stream\": true` is the important part. The response is\n**server-sent events** — a long-lived HTTP response where the server pushes one\nchunk per token as it is produced:\n\n```\ndata: {\"choices\":[{\"delta\":{\"content\":\"The\"}}]}\ndata: {\"choices\":[{\"delta\":{\"content\":\" page\"}}]}\ndata: {\"choices\":[{\"delta\":{\"content\":\" cache\"}}]}\ndata: [DONE]\n```\n\nThis is why \"latency\" needs more than one number. The response *starts* at one\ntime and *finishes* at another, and the gap between them depends on how long the\nanswer is.\n\n**Go deeper:** [vLLM OpenAI-compatible server](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html) (every endpoint and parameter it accepts) · [MDN — using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) (the streaming protocol itself, if `text/event-stream` is new to you)\n\n## 2. The vocabulary\n\nEvery abbreviation this course uses, defined once. Come back here.\n\n| Term | Expansion | What it means to you |\n|---|---|---|\n| **Token** | — | Sub-word chunk. ~0.75 words. The unit of everything. |\n| **Inference** | — | Using a trained model. What you operate. |\n| **Prefill** | — | Processing the whole prompt to produce the first token. |\n| **Decode** | — | Producing each token after the first, one at a time. |\n| **TTFT** | Time To First Token | How long until the answer starts. Queue + prefill. |\n| **ITL** | Inter-Token Latency | Gap between output tokens. How fast it reads. |\n| **TPOT** | Time Per Output Token | Another name for ITL. |\n| **KV cache** | Key/Value cache | Per-request GPU memory holding the conversation so far. |\n| **VRAM** | Video RAM | The GPU's own memory. Weights + KV cache live here. |\n| **Weights** | — | The model file. Fixed size, loaded once, shared by all requests. |\n| **Batch** | — | Requests being decoded together in one step. |\n| **Continuous batching** | — | Letting requests join and leave the batch every step. |\n| **Preemption** | — | The server evicting a running request to free KV cache. |\n| **GQA** | Grouped Query Attention | A design that shrinks the KV cache a lot. |\n| **PagedAttention** | — | vLLM's KV cache allocator. Virtual memory, for GPUs. |\n| **`max_num_seqs`** | — | Max requests decoded at once. Like a worker pool size. |\n| **`gpu_memory_utilization`** | — | Fraction of VRAM vLLM is allowed to claim. |\n| **SM** | Streaming Multiprocessor | A GPU's compute unit. A GPU has dozens. |\n| **CUDA** | — | NVIDIA's GPU programming platform. The driver plus libraries. |\n| **CUDA graph** | — | A pre-recorded sequence of GPU operations, replayed cheaply. |\n| **OOM** | Out Of Memory | Ran out of VRAM. Usually fatal to the process. |\n| **XID** | — | An NVIDIA hardware/driver error code. Usually means a sick GPU. |\n| **TP** | Tensor Parallelism | Splitting one model across several GPUs. |\n| **NCCL** | NVIDIA Collective Comms Library | How GPUs talk to each other. |\n| **MIG** | Multi-Instance GPU | Hardware partitioning of one GPU. A100/H100 only. |\n| **DCGM** | Data Center GPU Manager | NVIDIA's GPU metrics exporter. |\n\n**Go deeper:** [vLLM production metrics](https://docs.vllm.ai/en/latest/usage/metrics.html) (the authoritative list of signals — you will live in this page from Week 5 on) · [NVIDIA XID errors](https://docs.nvidia.com/deploy/xid-errors/index.html) (the codes that mean a GPU is sick; Week 8) · [Prometheus histograms and quantiles](https://prometheus.io/docs/practices/histograms/) (why `histogram_quantile` and not a gauge)\n\n## 3. The mental model to carry into Week 1\n\nA model server is a **stateful, memory-bound, streaming** service:\n\n- **Stateful** — each in-flight request holds GPU memory that grows as it\n  generates. Closest analogue: a long-lived connection with a per-connection\n  buffer that keeps growing.\n- **Memory-bound** — you will run out of VRAM long before you run out of\n  compute. Capacity planning is a memory problem, not a CPU problem.\n- **Streaming** — a request occupies the server for its entire answer, which\n  might be seconds. Nothing here completes in 10 ms.\n\nIf you have operated a WebSocket service with per-connection buffers on a box\nwith limited RAM, you already have most of the intuition. The rest is learning\nwhere the numbers live.\n\n## What to do next\n\nNothing to run here. Go to [Week 1](../lab01-request-anatomy/), which takes one\nrequest apart and shows you the four numbers inside it.\n\n---\n"}], "files": []}, "1": {"n": 1, "slug": "lab01-request-anatomy", "title": "Anatomy of a request", "needs": "1 GPU", "tool": null, "predict": "At 64 concurrent requests, how many times higher will TTFT be than at 1? And inter-token latency?", "markdown": "# Lab 01 — Anatomy of a request\n\n**Needs:** 1 GPU · **Time:** 30 min\n\nNew to this? Read [Week 0](../lab00-primer/) first — it defines every term used\nhere in about 25 minutes, and assumes no machine-learning background.\n\n## The question\n\n> A request took 4.2 seconds. Where did the time go?\n\n\"Latency\" is four different numbers with four different causes and four\ndifferent fixes. This lab splits them apart and shows you which one moves when\nyou add load.\n\n## Before you start\n\n```bash\n./labctl status          # engine must be up\n```\n\nIf it is not:\n\n```bash\n./labctl serve           # Qwen2.5-1.5B, 4096 context, 0.90 utilization\n```\n\n## Predict\n\nWrite these down. On paper, in a file, anywhere — but write them down.\n\n1. At **64** concurrent requests instead of 1, how many times higher will\n   **time to first token** be?\n2. How many times higher will **inter-token latency** be?\n3. Will total throughput (tokens/sec) go up by 64×? More? Less?\n\nYou will be wrong about at least one. That is the lab.\n\n## Run\n\n```bash\ncd lab01-request-anatomy\n./run.sh\n```\n\nTakes about three minutes. It warms the engine up first, then measures\nconcurrency 1, 8, 32 and 64.\n\nTo change what it does:\n\n```bash\n./run.sh --levels 1 4 16 64 --prompt-len 1024 --max-tokens 128\n```\n\n## What you should see\n\nReal output from an L4 24 GB running Qwen2.5-1.5B:\n\n```\n conc  TTFT p50  TTFT p95  ITL p50  ITL p95    tok/s\n------------------------------------------------------\n    1      19.5      19.5     13.2     13.4     74.3\n    8      42.4      44.8     13.5     13.6    572.8\n   32      62.0      77.6     15.2     15.5   1991.6\n   64     102.6     122.5     16.6     17.2   3581.3\n\n64x the load produced 48.2x the throughput.\n  TTFT   5.27x\n  ITL    1.25x\n\nTTFT absorbed the load; inter-token latency barely moved. This service is\nQUEUE-BOUND: more replicas would help, a faster GPU would not.\n```\n\nYour numbers will differ — different GPU, different model. The *shape* should\nnot: TTFT rises much faster than ITL, and throughput scales close to linearly\nuntil it doesn't.\n\n### If TTFT at concurrency 1 looks huge (200 ms+)\n\nThe warm-up did not take. Run it again. The first request through a fresh engine\npays lazy allocation and JIT costs that have nothing to do with load — when this\ncourse was built, that inflated concurrency-1 TTFT by 271 ms and made\nconcurrency 8 look four times *faster* than concurrency 1.\n\n## Answer these\n\nYou are done when you can answer all five without looking anything up.\n\n1. **What is TTFT made of?** Name the two phases inside it.\n2. **Why did ITL barely move while TTFT rose 5×?** What is each one waiting on?\n3. Your TTFT p95 breaches its SLO. `vllm:num_requests_waiting` is 40.\n   **Do more replicas help?** Why?\n4. Same breach, but `num_requests_waiting` is 0 and ITL has doubled.\n   **Do more replicas help now?** Why not?\n5. Open `curl -s localhost:8000/metrics | grep -E \"^vllm:(time_to_first|time_per_output)\"`.\n   **Which of your four numbers does each histogram correspond to?**\n\n## Then go further\n\n```bash\n./run.sh --levels 64 --prompt-len 128\n./run.sh --levels 64 --prompt-len 4000\n```\n\nSame concurrency, very different prompt length. Watch which number moves. This\nis the difference between *prefill* cost and *queueing* cost, and it is the\nsingle most useful distinction in the whole course.\n", "docs": {"concepts": "# Week 1 concepts — what an inference request actually does\n\nIf any term here is new, [Week 0](../lab00-primer/) defines all of them. This\npage assumes you have read it.\n\n## A request is not a unit of work\n\nIn a normal web service, requests cost roughly the same each time. You measure\nrequests per second and it means something.\n\nHere, one request might read 50 tokens of input and emit 10. The next reads\n8,000 and emits 2,000. They differ by two orders of magnitude in cost and arrive\non the same endpoint.\n\n**So requests per second is close to meaningless.** Tokens per second is the\nthroughput number that means something — and input and output tokens are not\ninterchangeable, for the reason in the next section.\n\n## The two phases\n\nEvery request has two compute phases with *opposite* performance\ncharacteristics. This asymmetry drives nearly everything else in the course.\n\n### Prefill — reading the prompt\n\nThe model reads your entire prompt and builds its KV cache (the per-request\nmemory holding the conversation so far). Every prompt token is processed **at\nthe same time**, in one large matrix multiplication.\n\n- Cost scales with **prompt length**\n- **Compute-bound** — the limit is the GPU's arithmetic throughput, measured in\n  FLOPS (floating-point operations per second)\n- Happens **once** per request, and produces the first output token\n\n### Decode — writing the answer\n\nThe model emits one token at a time. Each step reads the whole KV cache plus all\nthe model weights, does a small amount of arithmetic, and produces exactly one\ntoken.\n\n- Cost scales with **number of output tokens**\n- **Memory-bandwidth-bound** — the limit is how fast the GPU can move weights\n  and cache from VRAM into the compute units. The arithmetic units sit mostly\n  idle, waiting on memory\n- Happens **once per output token**\n\nTwo consequences worth holding onto:\n\n**Batching is nearly free during decode.** Since the bottleneck is reading the\nweights, and the same weights serve every request in the batch, you read them\nonce and apply them to all of it. Doubling the batch barely changes the time per\nstep. This is why throughput scales so well with concurrency.\n\n**GPU utilization is close to meaningless during decode.** `nvidia-smi` reports\nthe fraction of *time* a kernel was resident — not how much of the chip it used.\nA memory-bound decode step can read near 100% while most of the GPU idles.\n\n## The four numbers\n\n| Number | What it measures | Grows with |\n|---|---|---|\n| **Queue time** | Waiting for a scheduler slot | Concurrency above capacity |\n| **Prefill time** | Processing the prompt | Prompt length |\n| **TTFT** (time to first token) | Queue + prefill — \"slow to start\" | Both of the above |\n| **ITL** (inter-token latency) | Gap between output tokens — \"slow to read\" | Batch size, memory pressure |\n\nvLLM publishes these on `/metrics` in ordinary Prometheus format:\n\n```\nvllm:time_to_first_token_seconds      histogram  — TTFT\nvllm:time_per_output_token_seconds    histogram  — ITL\nvllm:num_requests_waiting             gauge      — the queue\nvllm:num_requests_running             gauge      — in the batch right now\n```\n\nBoth latency metrics are **histograms**, so a percentile needs\n`histogram_quantile()` over the buckets — you cannot read p95 off a single\nnumber. The `_sum` and `_count` series give you an interval mean, which is\ncheap and often enough for a dashboard.\n\n### The diagnostic that follows\n\n**TTFT and ITL move independently, for different reasons.** That is the whole\npoint of this lab, and it gives you a decision rule:\n\n- **TTFT up, ITL flat** → work is queueing. **Add replicas.**\n- **ITL up** → decode itself is under pressure. **Replicas will not help.** You\n  need a smaller batch, shorter contexts, or more memory bandwidth.\n\nGetting this backwards is the most expensive mistake in the course, because\nadding replicas to a decode-bound service costs real money and changes nothing.\n\n## Continuous batching\n\nA classic server collects requests for a few milliseconds and runs them as a\nbatch, so everyone waits for the slowest member.\n\nvLLM batches at every **decode step** instead. A sequence that finishes leaves\nthe batch, and a waiting one joins on the very next iteration. There is no batch\nwindow, and a 20-token request does not wait behind a 2,000-token one.\n\nThis is why throughput scales close to linearly with concurrency, right up until\nthe scheduler's own limit — which Week 3 goes looking for.\n\n## The SRE translation\n\n| You already operate this | Here it is called |\n|---|---|\n| Request latency | TTFT (start) and ITL (streaming) |\n| Requests per second | Tokens per second, input and output counted separately |\n| Queue depth | `vllm:num_requests_waiting` |\n| Worker pool size | `max_num_seqs` |\n| Heap / RSS | Model weights in VRAM — fixed, shared |\n| Page cache | KV cache — sized by what is left over, evicted under pressure |\n| Pool exhaustion | Requests queueing while the KV cache still has room |\n\nThe last row is the surprising one, and Week 3 is built on it.\n\n---\n\n## Going deeper\n\n**Read**\n\n- [vLLM production metrics](https://docs.vllm.ai/en/stable/usage/metrics/) —\n  the authoritative list of what the server exposes and what each field means.\n- [Anyscale — continuous batching for LLM inference](https://www.anyscale.com/blog/continuous-batching-llm-inference)\n  — the clearest explanation of why batching at every step beats a batch window,\n  with throughput measurements.\n- [Databricks — LLM inference performance engineering best practices](https://www.databricks.com/blog/llm-inference-performance-engineering-best-practices)\n  — defines TTFT, ITL and throughput the same way this course does, and shows\n  how they trade against each other.\n- [Baseten — a guide to LLM inference and performance](https://www.baseten.co/blog/llm-transformer-inference-guide/)\n  — goes carefully through why prefill is compute-bound and decode is\n  memory-bandwidth-bound. The single best source on that distinction.\n\n**Watch**\n\n- [Efficient LLM inference (vLLM team talk)](https://www.youtube.com/watch?v=5ZlavKF_98U)\n  — the engine's design straight from the people who wrote it.\n\n**Reference**\n\n- [Prometheus histograms and `histogram_quantile`](https://prometheus.io/docs/practices/histograms/)\n  — if the percentile mechanics above were unfamiliar.\n", "grading": "# Lab 01 — grading\n\n25 points. Instructor copy: contains the answers.\n\n## Submission\n\nOne markdown file containing:\n\n1. The predictions, written **before** the run (a git commit timestamp, a photo\n   of a notebook page, anything with a time on it)\n2. The raw output of `./run.sh`\n3. Answers to the five questions\n4. One paragraph: which prediction was most wrong, and why\n\nA submission with no predictions scores a maximum of 15. The prediction is not\na formality — it is the measured thing.\n\n## Rubric\n\n| | Pts | Fail (0) | Pass (60%) | Strong (100%) |\n|---|---|---|---|---|\n| Predictions made first | 4 | absent or backdated | present, reasoned | reasoning names a mechanism, not a guess |\n| Run completed | 4 | no output | table produced | also ran the prompt-length variants |\n| Q1–Q2 (mechanism) | 6 | phases not distinguished | names prefill and decode | explains compute- vs memory-bound |\n| Q3–Q4 (diagnosis) | 8 | guesses | correct call on both | cites the metric that decides it |\n| Q5 (metrics) | 3 | not attempted | both histograms mapped | notes they are histograms, not gauges |\n\n**Bump one band** for a student who spotted the cold-start artifact unprompted,\nor who noticed throughput scaling sub-linearly and asked why.\n\n## Answer key\n\n**Q1 — What is TTFT made of?**\nQueue time plus prefill time. Queue time is waiting for a scheduler slot;\nprefill is processing the whole prompt to produce the first token. A good answer\nnotes you cannot separate them from the client — you need\n`vllm:num_requests_waiting` to know which half moved.\n\n**Q2 — Why did ITL barely move while TTFT rose 5×?**\nThey wait on different things. TTFT absorbs queueing, and queueing is what grows\nwhen you add concurrency beyond the batch. ITL is the per-step decode time; with\ncontinuous batching, adding sequences to a batch costs almost nothing per step\nbecause decode is memory-bandwidth-bound — the weights are read once for the\nwhole batch. ITL only rises once the batch is large enough that the KV cache\nreads start to dominate.\n\n**Q3 — TTFT breaching, 40 requests waiting. Do replicas help?**\nYes. A non-zero queue means requests are waiting for a slot, not computing. A\nsecond replica gives them somewhere else to go. This is the ordinary\nhorizontal-scaling case and it is the *only* one where replicas are the answer.\n\n**Q4 — TTFT breaching, queue is 0, ITL doubled. Do replicas help?**\nNo. Nothing is waiting for a slot, so there is no queue to drain. The time is\ngoing into decode itself — the batch is too large, the KV cache is under\npressure, or sequences are long. Fixes are a smaller `max_num_seqs`, shorter\ncontexts, quantization, or a GPU with more memory bandwidth. Adding replicas\nspends money and changes nothing.\n\nStudents who get Q3 right and Q4 wrong have learned a rule rather than a\nmechanism. That is the most common failure in this lab, and it is worth\naddressing directly in the debrief.\n\n**Q5 — Which histogram is which?**\n`vllm:time_to_first_token_seconds` is TTFT; `vllm:time_per_output_token_seconds`\nis ITL. Both are histograms with `_bucket`, `_sum` and `_count` series, so a\npercentile needs `histogram_quantile` over the buckets — you cannot read p95 off\na single number. A strong answer notes that `_sum`/`_count` gives you an interval\n*mean*, which is cheap and often good enough for a dashboard.\n\n## Common wrong answers\n\n**\"Throughput went up 48×, so we have 48× headroom.\"** No — the sub-linear\nscaling is the early edge of saturation. Lab 03 finds where it stops entirely.\n\n**\"GPU utilization was high, so the GPU is the bottleneck.\"** Utilization is a\nduty-cycle sampler. During memory-bound decode it reads high while most of the\nchip idles. Do not accept it as evidence for anything.\n\n**\"ITL rose 1.25×, so decode is degrading.\"** 1.25× across a 64× load increase is\nessentially flat. Ask the student what they would expect if decode really were\nthe bottleneck (answer: ITL rising roughly linearly with batch size).\n\n## Time\n\nMost students finish in 30 minutes. Budget 45 for the debrief, and spend it on\nQ3 vs Q4 — the difference between those two answers is the entire course in\nminiature.\n"}, "parts": [], "files": ["decompose.py", "run.sh"]}}};</script>
+<script>
+/* Interactive explainers for Week 0.
+   Mounted where a lab file contains <!-- widget:name --> — invisible when the
+   same markdown is read on disk or a git host. Nothing here touches a GPU. */
+
+const WIDGETS = {};
+
+function mountWidgets(root) {
+  root.querySelectorAll("[data-widget]").forEach(el => {
+    const fn = WIDGETS[el.dataset.widget];
+    if (fn) fn(el);
+    else el.remove();
+  });
+}
+
+/* ---------------------------------------------------------------- tokenizer
+   Real tokenizers apply a learned merge table we cannot ship here. What we can
+   do exactly is the pre-tokenizer: the regex GPT-2 and friends use to cut text
+   into candidate pieces before merging. Long or unusual words then split
+   further, which the approximation below imitates. Labelled as approximate. */
+const PRETOK = /'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+/gu;
+const COMMON = new Set(("the of and to a in is it you that he was for on are with as i his they be at "
+  + "one have this from or had by hot but some what there we can out other were all your when up use "
+  + "word how said an each she which do their time if will way about many then them would write like "
+  + "so these her long make thing see him two has look more day could go come did number sound no most "
+  + "people my over know water than call first who may down side been now find any new work part take "
+  + "get place made live where after back little only round man year came show every good me give our "
+  + "under name very through just form much great think say help low line before turn cause same mean "
+  + "differ move right boy old too does tell sentence set three want air well also play small end put "
+  + "home read hand port large spell add even land here must big high such follow act why ask men "
+  + "change went light kind off need house picture try us again animal point mother world near build "
+  + "self earth father page capital france paris cache memory token model server request latency").split(" "));
+
+function splitWord(piece) {
+  const lead = piece.startsWith(" ") ? " " : "";
+  const word = piece.slice(lead.length);
+  if (!word) return [piece];
+  if (word.length <= 3 || COMMON.has(word.toLowerCase())) return [piece];
+  // Long or uncommon: BPE would keep a frequent stem and shed the rest.
+  const out = [];
+  let rest = word, first = true;
+  while (rest.length > 0) {
+    const take = first ? Math.min(rest.length, Math.max(3, Math.ceil(rest.length / 2)))
+                       : Math.min(rest.length, 4);
+    out.push((first ? lead : "") + rest.slice(0, take));
+    rest = rest.slice(take);
+    first = false;
+  }
+  return out;
+}
+
+function tokenize(text) {
+  const pieces = text.match(PRETOK) || [];
+  return pieces.flatMap(p => (/^\s+$/.test(p) ? [p] : splitWord(p)));
+}
+
+WIDGETS.tokenizer = el => {
+  el.innerHTML = `
+    <div class="w">
+      <div class="w-head"><span class="w-title">Tokenizer</span>
+        <span class="w-note">approximate &mdash; see note below</span></div>
+      <div class="w-body">
+        <textarea id="tk-in" rows="3" spellcheck="false">The capital of France is Paris. Unbelievably, tokenization is not about words.</textarea>
+        <div class="chips" id="tk-out"></div>
+        <div class="w-stats">
+          <div><b id="tk-chars">0</b><span>characters</span></div>
+          <div><b id="tk-words">0</b><span>words</span></div>
+          <div><b id="tk-tokens">0</b><span>tokens</span></div>
+          <div><b id="tk-ratio">0</b><span>chars / token</span></div>
+        </div>
+        <p class="w-foot">Whitespace is part of the token that follows it &mdash; that is why
+          <code>" Paris"</code> carries a leading space. Common short words are one token;
+          long or unusual ones split. For the exact vocabulary of a real model, try the
+          <a href="https://platform.openai.com/tokenizer" target="_blank" rel="noopener">OpenAI
+          tokenizer</a>.</p>
+      </div>
+    </div>`;
+
+  const inp = el.querySelector("#tk-in");
+  const draw = () => {
+    const text = inp.value;
+    const toks = tokenize(text);
+    el.querySelector("#tk-out").innerHTML = toks.map((t, i) =>
+      `<span class="chip c${i % 6}">${t.replace(/ /g, "·").replace(/\n/g, "↵")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span>`).join("");
+    const words = (text.trim().match(/\S+/g) || []).length;
+    el.querySelector("#tk-chars").textContent = text.length;
+    el.querySelector("#tk-words").textContent = words;
+    el.querySelector("#tk-tokens").textContent = toks.length;
+    el.querySelector("#tk-ratio").textContent =
+      toks.length ? (text.length / toks.length).toFixed(1) : "0";
+  };
+  inp.addEventListener("input", draw);
+  draw();
+};
+
+/* ------------------------------------------------------------ the loop
+   Shows that generation is a loop over a growing context, and that KV cache
+   grows with it — the two facts the rest of the course is built on. */
+WIDGETS.loop = el => {
+  const PROMPT = "The capital of France is";
+  const NEXT = [" Paris", ",", " a", " city", " of", " about", " two", " million", " people", "."];
+  const LAYERS = 28, KV_PER_TOKEN = 28;   // Qwen2.5-1.5B: 28 layers, 28 KiB/token
+
+  el.innerHTML = `
+    <div class="w">
+      <div class="w-head"><span class="w-title">One answer, one token at a time</span>
+        <span class="w-note" id="lp-step">step 0</span></div>
+      <div class="w-body">
+
+        <p class="w-sub">The context &mdash; what the model is looking at</p>
+        <div class="ctx" id="lp-ctx"></div>
+
+        <p class="w-sub" style="margin-top:18px">Its KV cache &mdash; one column per token, one row per layer</p>
+        <div class="kvgrid" id="lp-grid"></div>
+        <div class="kv-legend" style="margin-top:9px">
+          <span><i class="sw kvp"></i>cached from the prompt</span>
+          <span><i class="sw kvg"></i>cached as it generates</span>
+          <span><i class="sw"></i>not computed yet</span>
+        </div>
+
+        <div class="w-stats">
+          <div><b id="lp-n">0</b><span>tokens generated</span></div>
+          <div><b id="lp-ctxlen">0</b><span>tokens in the cache</span></div>
+          <div><b id="lp-kv">0</b><span>KiB the cache holds</span></div>
+          <div><b id="lp-phase">idle</b><span>phase</span></div>
+        </div>
+
+        <div class="ctl" style="margin-top:14px">
+          <button id="lp-run">Generate</button>
+          <button class="ghost" id="lp-reset">Reset</button>
+        </div>
+
+        <p class="w-foot">Watch the grid. <b>Prefill</b> fills every column of the prompt at
+          once &mdash; that is one big parallel pass. Then each <b>decode</b> step adds exactly
+          one new column and re-reads all the others. Nothing is ever recomputed, and nothing
+          is ever freed until the request ends.</p>
+        <p class="w-foot">Twenty-eight rows because this model has twenty-eight layers, and
+          every layer keeps its own key and value for every token. That is where the 28 KiB
+          per token comes from.</p>
+      </div>
+    </div>`;
+
+  const promptToks = tokenize(PROMPT);
+  const TOTAL = promptToks.length + NEXT.length;
+  let made = [], timer = null;
+
+  const draw = phase => {
+    const tok = t => t.replace(/ /g, "\u00b7");
+    el.querySelector("#lp-ctx").innerHTML =
+      promptToks.map(t => `<span class="chip prompt">${tok(t)}</span>`).join("") +
+      made.map((t, i) => `<span class="chip gen${i === made.length - 1 ? " new" : ""}">${
+        tok(t)}</span>`).join("") +
+      (phase === "decode" ? '<span class="caret"></span>' : "");
+
+    // One column per token slot, one row per layer. Columns light up as their
+    // token enters the cache; the newest column is highlighted.
+    const filled = phase === "idle" ? 0 : promptToks.length + made.length;
+    const newest = made.length ? filled - 1 : -1;
+    let rows = "";
+    for (let l = 0; l < LAYERS; l++) {
+      let cells = "";
+      for (let c = 0; c < TOTAL; c++) {
+        const on = c < filled;
+        const isPrompt = c < promptToks.length;
+        cells += `<i class="${on ? (isPrompt ? "kvp" : "kvg") : ""}${
+          c === newest && phase !== "idle" ? " fresh" : ""}"></i>`;
+      }
+      rows += `<div class="kvrow">${cells}</div>`;
+    }
+    el.querySelector("#lp-grid").innerHTML = rows;
+
+    // The stats describe the cache, so they follow `filled` — at idle nothing
+    // has been computed yet and the cache is genuinely empty.
+    el.querySelector("#lp-n").textContent = made.length;
+    el.querySelector("#lp-ctxlen").textContent = filled;
+    el.querySelector("#lp-kv").textContent = filled * KV_PER_TOKEN;
+    el.querySelector("#lp-step").textContent = `step ${made.length}`;
+    el.querySelector("#lp-phase").textContent = phase;
+  };
+
+  const stop = () => {
+    clearInterval(timer); timer = null;
+    el.querySelector("#lp-run").textContent = "Generate";
+  };
+
+  el.querySelector("#lp-run").onclick = () => {
+    if (timer) { stop(); return; }
+    if (made.length >= NEXT.length) made = [];
+    el.querySelector("#lp-run").textContent = "Pause";
+    draw("prefill");                       // whole prompt cached in one pass
+    setTimeout(() => {
+      timer = setInterval(() => {
+        if (made.length >= NEXT.length) { stop(); draw("done"); return; }
+        made.push(NEXT[made.length]);
+        draw("decode");
+      }, 520);
+    }, 900);
+  };
+  el.querySelector("#lp-reset").onclick = () => { stop(); made = []; draw("idle"); };
+  draw("idle");
+};
+
+/* --------------------------------------------------------- batching
+   Why an inference server exists. Six requests, served strictly one after
+   another versus all together. The point is not scheduling cleverness: a
+   decode step spends its time reading the model weights out of memory, and
+   that read is shared by everyone in the batch. */
+WIDGETS.batching = el => {
+  const REQS = [
+    { id: "A", arrive: 0, tokens: 4 },
+    { id: "B", arrive: 0, tokens: 7 },
+    { id: "C", arrive: 1, tokens: 3 },
+    { id: "D", arrive: 2, tokens: 6 },
+    { id: "E", arrive: 3, tokens: 2 },
+    { id: "F", arrive: 4, tokens: 5 },
+  ];
+
+  // One at a time: each request has the whole GPU to itself until it finishes.
+  const solo = [];
+  let clock = 0;
+  for (const r of REQS) {
+    const start = Math.max(clock, r.arrive);
+    solo.push({ ...r, start, end: start + r.tokens });
+    clock = start + r.tokens;
+  }
+  // Together: every request that has arrived gets a token on every step.
+  const batch = REQS.map(r => ({ ...r, start: r.arrive, end: r.arrive + r.tokens }));
+
+  const span = Math.max(...solo.map(r => r.end));
+  const doneSolo = span;
+  const doneBatch = Math.max(...batch.map(r => r.end));
+
+  const lanes = (rows, cls) => rows.map(r => `
+    <div class="lane">
+      <span class="lane-id">${r.id}</span>
+      <div class="track">${Array.from({ length: span }, (_, t) =>
+        `<i class="${t >= r.start && t < r.end ? "busy " + cls
+                    : t >= r.arrive && t < r.start ? "wait" : ""}"></i>`).join("")}</div>
+      <span class="lane-n">${r.end}</span>
+    </div>`).join("");
+
+  el.innerHTML = `
+    <div class="w">
+      <div class="w-head"><span class="w-title">Six requests, two ways to serve them</span>
+        <span class="w-note">same work, same GPU</span></div>
+      <div class="w-body">
+
+        <p class="w-explain">Each <b>row</b> is one request. Each <b>column</b> is one step of
+          the loop from section&nbsp;1 &mdash; the time it takes to produce a single token.
+          Requests arrive at different moments, and each needs a different number of tokens.</p>
+
+        <div class="kv-legend">
+          <span><i class="sw busy s1"></i>generating a token</span>
+          <span><i class="sw wait"></i>arrived, but waiting its turn</span>
+          <span><i class="sw"></i>not here yet, or finished</span>
+        </div>
+
+        <p class="w-sub" style="margin-top:18px">Serving them one after another</p>
+        <div class="lanes">${lanes(solo, "s1")}</div>
+        <p class="w-cap">Request F arrives at step 4 and does not get to start until step
+          ${solo[5].start}. Everything is done at step <b>${doneSolo}</b>.</p>
+
+        <p class="w-sub" style="margin-top:20px">Serving them all together</p>
+        <div class="lanes">${lanes(batch, "s2")}</div>
+        <p class="w-cap">Nobody waits. Everything is done at step <b>${doneBatch}</b>.</p>
+
+        <div class="w-stats" style="margin-top:18px">
+          <div><b>${doneSolo}</b><span>steps, one at a time</span></div>
+          <div><b>${doneBatch}</b><span>steps, all together</span></div>
+          <div><b>${(doneSolo / doneBatch).toFixed(1)}&times;</b><span>faster</span></div>
+          <div><b>${(REQS.reduce((a, r) => a + r.tokens, 0) / doneBatch).toFixed(1)}</b><span>tokens per step, batched</span></div>
+        </div>
+
+        <p class="w-foot"><b>Why is the second one not cheating?</b> A decode step spends
+          almost all of its time reading the model&rsquo;s weights &mdash; gigabytes &mdash;
+          out of GPU memory. That read happens once per step no matter how many requests are
+          in flight, and every request in the batch uses the same weights. So producing six
+          tokens for six requests costs barely more than producing one token for one request.
+          Serving them one at a time pays for that expensive read and then throws away most
+          of the benefit.</p>
+        <p class="w-foot">Getting this right &mdash; deciding who joins the batch, who waits,
+          and what happens when memory runs out &mdash; is most of what an inference server
+          does for you.</p>
+      </div>
+    </div>`;
+};
+
+/* ------------------------------------------------------------- kv cache
+   Why the cache exists at all: without it, every step re-reads the whole
+   prefix, so work grows with the square of the length. With it, each step
+   handles one token and looks the rest up. The memory strip shows what that
+   trade costs. */
+WIDGETS.kvcache = el => {
+  const KV_PER_TOKEN = 28;          // KiB — Qwen2.5-1.5B, 28 layers, 2 KV heads
+  const PROMPT_TOKENS = 5;
+
+  el.innerHTML = `
+    <div class="w">
+      <div class="w-head"><span class="w-title">Recompute, or remember?</span>
+        <span class="w-note" id="kv-step">step 0</span></div>
+      <div class="w-body">
+        <div class="ctl">
+          <div class="field"><label for="kv-len">Tokens to generate</label>
+            <input id="kv-len" type="range" min="4" max="200" value="24" style="min-width:200px"></div>
+          <div class="field"><label>&nbsp;</label>
+            <span class="w-range" id="kv-len-v">24</span></div>
+          <button id="kv-run">Step through it</button>
+          <button class="ghost" id="kv-reset">Reset</button>
+        </div>
+
+        <div class="kv-cols">
+          <div>
+            <p class="w-sub">Without a cache &mdash; re-read everything, every step</p>
+            <div class="kv-bars" id="kv-no"></div>
+          </div>
+          <div>
+            <p class="w-sub">With a cache &mdash; one new token, rest looked up</p>
+            <div class="kv-bars" id="kv-yes"></div>
+          </div>
+        </div>
+
+        <div class="w-stats">
+          <div><b id="kv-work-no">0</b><span>token-steps, no cache</span></div>
+          <div><b id="kv-work-yes">0</b><span>token-steps, cached</span></div>
+          <div><b id="kv-mult">1&times;</b><span>less work</span></div>
+          <div><b id="kv-mem">140</b><span>KiB the cache holds</span></div>
+        </div>
+
+        <p class="w-foot" id="kv-math"></p>
+        <p class="w-foot">Each bar is one generation step; its width is how many tokens that
+          step had to process. The left column is <code>N&middot;P + N(N-1)/2</code> &mdash; the
+          curve with N&sup2; in it. The right column is <code>P + N</code>. The cache is what
+          turns the first into the second, paid for in GPU memory that grows for as long as
+          the request lives.</p>
+      </div>
+    </div>`;
+
+  const lenEl = el.querySelector("#kv-len");
+  let step = 0, timer = null;
+
+  const draw = () => {
+    const total = +lenEl.value;
+    el.querySelector("#kv-len-v").textContent = total;
+
+    const shown = Math.min(step, total);
+    const maxCtx = PROMPT_TOKENS + total;      // widest bar, for scaling
+
+    const bars = (fn, cls) => Array.from({ length: total }, (_, i) => {
+      const w = fn(i) / maxCtx * 100;
+      const on = i < shown;
+      return `<i class="${cls}${on ? " on" : ""}" style="width:${w.toFixed(2)}%"></i>`;
+    }).join("");
+
+    // Without a cache, step i re-reads the prompt plus everything generated so far.
+    el.querySelector("#kv-no").innerHTML = bars(i => PROMPT_TOKENS + i, "kvb no");
+    // With a cache, every step handles exactly one new token.
+    el.querySelector("#kv-yes").innerHTML = bars(() => 1, "kvb yes");
+
+    let workNo = 0;
+    for (let i = 0; i < shown; i++) workNo += PROMPT_TOKENS + i;
+    const workYes = shown;
+    const mem = (PROMPT_TOKENS + shown) * KV_PER_TOKEN;
+
+    el.querySelector("#kv-step").textContent = `step ${shown} of ${total}`;
+    el.querySelector("#kv-work-no").textContent = workNo.toLocaleString("en-US");
+    el.querySelector("#kv-work-yes").textContent = workYes.toLocaleString("en-US");
+    el.querySelector("#kv-mult").textContent =
+      workYes ? (workNo / workYes).toFixed(1) + "×" : "1×";
+    el.querySelector("#kv-mem").textContent = mem.toLocaleString("en-US");
+  };
+
+  const stop = () => {
+    clearInterval(timer); timer = null;
+    el.querySelector("#kv-run").textContent = "Step through it";
+  };
+
+  el.querySelector("#kv-run").onclick = () => {
+    if (timer) { stop(); return; }
+    if (step >= +lenEl.value) step = 0;
+    el.querySelector("#kv-run").textContent = "Pause";
+    timer = setInterval(() => {
+      if (step >= +lenEl.value) { stop(); return; }
+      step++; draw();
+    }, 70);
+  };
+  el.querySelector("#kv-reset").onclick = () => { stop(); step = 0; draw(); };
+  lenEl.oninput = () => { stop(); step = 0; draw(); };
+
+  // Open showing the finished state, so the shape is visible before pressing anything.
+  step = +lenEl.value;
+  draw();
+};
+
+</script>
+<script>
+/* Course website. No GPU connection, no auth — everything that touches
+   hardware happens in the labs repo on the student's own box. */
+
+const $ = id => document.getElementById(id);
+const fmt = (v, d = 0) => v == null || Number.isNaN(v) ? "—"
+  : v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/* ================= markdown =================
+   A small renderer rather than a CDN dependency: the site has to work on a
+   machine with no outbound internet. Covers what the lab files actually use. */
+function mdToHtml(md) {
+  const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const blocks = [];
+  const MARK = "⁣C";
+  md = md.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
+    MARK + (blocks.push(`<pre><code>${esc(code.replace(/\n$/, ""))}</code></pre>`) - 1) + MARK);
+
+  const inline = t => esc(t)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, href) => {
+      const to = siteHref(href);
+      return to.external
+        ? `<a href="${to.href}" target="_blank" rel="noopener">${text}</a>`
+        : `<a href="${to.href}">${text}</a>`;
+    });
+
+  const isBlock = l => new RegExp("^" + MARK + "\\d+" + MARK + "$").test(l.trim());
+  const out = [], lines = md.split("\n");
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (isBlock(line)) { out.push(blocks[+line.trim().split(MARK).join("")]); i++; continue; }
+    if (/^\s*$/.test(line)) { i++; continue; }
+    if (/^---+\s*$/.test(line)) { out.push("<hr>"); i++; continue; }
+
+    // <!-- widget:name --> is a mount point here and an invisible comment
+    // anywhere else the same markdown is read.
+    const wg = line.match(/^\s*<!--\s*widget:([a-z0-9_-]+)\s*-->\s*$/i);
+    if (wg) { out.push(`<div data-widget="${wg[1]}"></div>`); i++; continue; }
+
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) { out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
+
+    if (/^>\s?/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^>\s?/, "")); i++; }
+      out.push(`<blockquote>${mdToHtml(buf.join("\n"))}</blockquote>`);
+      continue;
+    }
+
+    if (/^\|/.test(line) && /^\|[\s:|-]+\|?\s*$/.test(lines[i + 1] || "")) {
+      const cells = r => r.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const head = cells(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && /^\|/.test(lines[i])) { rows.push(cells(lines[i])); i++; }
+      out.push(`<div class="tscroll"><table><thead><tr>${
+        head.map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${
+        rows.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")
+      }</tbody></table></div>`);
+      continue;
+    }
+
+    if (/^\s*(?:[-*]|\d+\.)\s+/.test(line)) {
+      const ordered = /^\s*\d+\./.test(line);
+      const items = [];
+      while (i < lines.length && /^\s*(?:[-*]|\d+\.)\s+/.test(lines[i])) {
+        let txt = lines[i].replace(/^\s*(?:[-*]|\d+\.)\s+/, "");
+        i++;
+        while (i < lines.length && /^\s{2,}\S/.test(lines[i]) &&
+               !/^\s*(?:[-*]|\d+\.)\s+/.test(lines[i])) { txt += " " + lines[i].trim(); i++; }
+        items.push(`<li>${inline(txt)}</li>`);
+      }
+      out.push(`<${ordered ? "ol" : "ul"}>${items.join("")}</${ordered ? "ol" : "ul"}>`);
+      continue;
+    }
+
+    const para = [];
+    while (i < lines.length && !/^\s*$/.test(lines[i]) &&
+           !/^(#{1,4}\s|>|\||\s*(?:[-*]|\d+\.)\s|---+\s*$)/.test(lines[i]) &&
+           !isBlock(lines[i])) { para.push(lines[i]); i++; }
+    if (para.length) {
+      const text = para.join(" ");
+      // "Go deeper:" paragraphs are further-reading, not prose — set them apart.
+      const cls = /^\*\*Go deeper:\*\*/.test(text) ? ' class="refs"' : "";
+      out.push(`<p${cls}>${inline(text)}</p>`);
+    }
+  }
+  return out.join("\n");
+}
+
+/* Lab READMEs link between each other with filesystem paths, so they stay
+   correct when read on disk or on a git host. The browser would resolve
+   "../lab00-primer/" against the site URL and 404, so map those onto routes. */
+function siteHref(href) {
+  if (/^(https?:|mailto:|#)/.test(href)) {
+    return { href, external: /^https?:/.test(href) };
+  }
+  const m = href.match(/(?:^|\/)(lab(\d{2})-[a-z0-9-]+)\/?$/i);
+  if (m) {
+    const w = WEEKS.find(x => x.slug.toLowerCase() === m[1].toLowerCase());
+    if (w) return { href: `#week/${w.n}`, external: false };
+    return { href: `#week/${parseInt(m[2], 10)}`, external: false };
+  }
+  // A file inside the labs repo: nothing to serve it from, so point at the
+  // repo path rather than producing a link that silently 404s.
+  return { href: "#", external: false, file: href };
+}
+
+/* ================= progress, per browser ================= */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("c:" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("c:" + k, JSON.stringify(v)); } catch {} },
+};
+
+let WEEKS = [];
+
+function renderNav() {
+  const done = store.get("done", {});
+  const h = location.hash || "#home";
+  $("nav").innerHTML =
+    `<a href="#home" class="${h === "#home" ? "on" : ""}"><span class="wk">&#9632;</span><span>Course home</span></a>
+     <div class="sep"></div><div class="navhead">Weeks</div>` +
+    WEEKS.map(w => `<a href="#week/${w.n}"
+        class="${h === "#week/" + w.n ? "on" : ""}${w.available ? "" : " soon"}">
+        <span class="wk">${String(w.n).padStart(2, "0")}</span><span>${w.title}</span>
+        ${done[w.n] ? '<span class="tick">&#10003;</span>' : ""}</a>`).join("");
+}
+
+function markDone(n) {
+  const d = store.get("done", {});
+  d[n] = true;
+  store.set("done", d);
+  renderNav();
+}
+
+async function route() {
+  const h = location.hash || "#home";
+  const m = h.match(/^#week\/(\d+)$/);
+  if (m) await showWeek(+m[1]); else showHome();
+  renderNav();
+  window.scrollTo(0, 0);
+}
+
+/* ---- home ---- */
+function showHome() {
+  $("predict").hidden = true;
+  $("pagetitle").textContent = "Operating LLM Inference";
+  const done = store.get("done", {});
+  const n = WEEKS.filter(w => done[w.n]).length;
+  const next = WEEKS.find(w => w.available && !done[w.n]) || WEEKS[0];
+
+  $("tool").innerHTML = `
+    <div class="hero">
+      <h2>From operating Kubernetes to debugging a GPU-backed inference service</h2>
+      <p>Eight weeks for experienced SREs. No machine-learning background needed.
+         Every week asks you to predict a number, measure it on a real GPU, and
+         explain the gap between the two.</p>
+      <p>This site is the brief. The measuring happens on your own box, through the
+         labs repo.</p>
+      <div class="progress">${WEEKS.map(w =>
+        `<i class="${done[w.n] ? "on" : ""}" title="Week ${w.n}"></i>`).join("")}</div>
+      <p class="prog-label">${n} of ${WEEKS.length} weeks complete</p>
+      <div class="ctl" style="margin-top:18px">
+        <button onclick="location.hash='#week/${next ? next.n : 1}'">
+          ${n ? "Continue" : "Start"} &mdash; Week ${next ? next.n : 1}</button>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step"><span class="num">STEP 1</span><h3>Get a GPU</h3>
+        <p>Any NVIDIA card of compute capability 7.0 or newer, with root access.
+           A rented instance is fine; a hosted notebook is not.</p></div>
+      <div class="step"><span class="num">STEP 2</span><h3>Clone the labs</h3>
+        <p>The workloads and test scripts live in their own repo.</p>
+        <code>git clone &lt;labs-repo&gt;
+cd ai-tutorial-labs</code></div>
+      <div class="step"><span class="num">STEP 3</span><h3>Check, then set up</h3>
+        <p><code>check</code> changes nothing and tells you what is missing.</p>
+        <code>./labctl check
+./labctl setup</code></div>
+      <div class="step"><span class="num">STEP 4</span><h3>Start and run</h3>
+        <p>Then open Week 1 and work down the list.</p>
+        <code>./labctl serve
+./labctl run 01</code></div>
+    </div>`;
+  $("body").innerHTML = "";
+}
+
+/* ---- a week ---- */
+const BAKED = typeof window !== "undefined" && window.__COURSE__ ? window.__COURSE__ : null;
+
+async function showWeek(n) {
+  const meta = WEEKS.find(w => w.n === n);
+  $("pagetitle").innerHTML = `Week ${n}${meta ? " &mdash; " + meta.title : ""}` +
+    (meta ? `<span class="needs">${meta.needs}</span>` : "");
+  $("body").innerHTML = "<p>Loading&hellip;</p>";
+  $("tool").innerHTML = "";
+
+  let data, res;
+  try {
+    if (BAKED) {
+      data = BAKED.detail[n] || null;
+      res = { ok: !!data };
+    } else {
+      res = await fetch(`/api/weeks/${n}`);
+      data = await res.json();
+    }
+  } catch {
+    $("predict").hidden = true;
+    $("body").innerHTML = "<p><b>Could not reach the site's API.</b> Is it still running?</p>";
+    return;
+  }
+  if (!res.ok) {
+    $("predict").hidden = true;
+    $("body").innerHTML =
+      `<p><b>This week has not been written yet.</b></p>
+       <p>The course is being built one week at a time. Week 1 is ready.</p>`;
+    return;
+  }
+
+  renderPredict(data);
+  renderTool(data);
+  renderTabs(data);
+}
+
+function renderPredict(w) {
+  const box = $("predict");
+  if (!w.predict) { box.hidden = true; return; }
+  box.hidden = false;
+  $("predict-q").textContent = w.predict;
+  const saved = store.get("predict:" + w.n, null);
+  const row = $("predict-row");
+  if (saved) {
+    row.innerHTML = `<span class="locked"></span><button class="ghost" id="p-reset">Change</button>`;
+    row.querySelector(".locked").textContent = saved;
+    $("p-reset").onclick = () => { store.set("predict:" + w.n, null); renderPredict(w); };
+  } else {
+    row.innerHTML = `<input id="p-in" placeholder="your prediction, in your own words">
+                     <button id="p-save">Lock it in</button>`;
+    const save = () => {
+      const v = $("p-in").value.trim();
+      if (!v) return;
+      store.set("predict:" + w.n, v);
+      renderPredict(w);
+    };
+    $("p-save").onclick = save;
+    $("p-in").onkeydown = e => { if (e.key === "Enter") save(); };
+  }
+}
+
+/* Runbook / concepts / grading are separate files in the labs repo; show them
+   as tabs rather than making the reader hunt for them. */
+function renderTabs(w) {
+  const docs = w.docs || {};
+  // A week split into parts shows those as the tabs; its README is the index.
+  const tabs = (w.parts && w.parts.length)
+    ? w.parts.map((p, i) => ["part" + i, `${i + 1}. ${p.title}`, p.markdown])
+    : [["runbook", "Runbook", w.markdown]];
+  if (docs.concepts) tabs.push(["concepts", "Concepts", docs.concepts]);
+  if (docs.grading) tabs.push(["grading", "Grading", docs.grading]);
+
+  const body = $("body");
+  if (tabs.length === 1) {
+    body.innerHTML = mdToHtml(w.markdown);
+    mountWidgets(body);
+    return;
+  }
+
+  body.innerHTML = `<div class="tabs" id="tabs">${tabs.map(([k, label], i) =>
+      `<button class="tab${i ? "" : " on"}" data-k="${k}">${label}</button>`).join("")}</div>
+    <div id="tabbody"></div>`;
+  const show = k => {
+    $("tabbody").innerHTML = mdToHtml(tabs.find(t => t[0] === k)[2]);
+    mountWidgets($("tabbody"));
+    document.querySelectorAll("#tabs .tab").forEach(b => b.classList.toggle("on", b.dataset.k === k));
+  };
+  document.querySelectorAll("#tabs .tab").forEach(b => { b.onclick = () => show(b.dataset.k); });
+  show(tabs[0][0]);
+}
+
+function panel(title, eyebrow, inner) {
+  return `<section class="panel"><div class="panel-head"><h2>${title}</h2>
+    <p class="eyebrow">${eyebrow}</p></div><div class="panel-body">${inner}</div></section>`;
+}
+
+/* ---- tools: pure client-side arithmetic and checklists, no GPU involved ---- */
+function renderTool(w) {
+  const host = $("tool");
+  if (w.tool === "vram") return toolVram(host, w);
+  if (w.tool === "alerts") return toolAlerts(host, w);
+  if (w.tool === "faults") return toolFaults(host, w);
+}
+
+/* Week 2 — the KV cache arithmetic, as something you can play with before you
+   run anything on a box. Pure maths; nothing here talks to a GPU. */
+function toolVram(host, w) {
+  const PRESETS = {
+    "Qwen2.5 1.5B": [1.54, 28, 2, 128],
+    "Qwen2.5 7B": [7.62, 28, 4, 128],
+    "Llama 3.1 8B": [8.03, 32, 8, 128],
+    "Llama 3.2 3B": [3.21, 28, 8, 128],
+    "Mistral 7B v0.3": [7.25, 32, 8, 128],
+    "Phi-3-mini 3.8B": [3.82, 32, 32, 96],
+  };
+  const selStyle = "font-family:var(--f-mono);font-size:.84rem;padding:7px 9px;" +
+    "border:1px solid var(--rule-strong);border-radius:3px;background:var(--surface);" +
+    "color:var(--ink);min-width:170px";
+
+  host.innerHTML = panel("KV cache calculator", "week 2",
+    `<div class="ctl">
+       <div class="field"><label for="v-preset">Model</label>
+         <select id="v-preset" style="${selStyle}">
+           ${Object.keys(PRESETS).map(k => `<option>${k}</option>`).join("")}</select></div>
+       <div class="field"><label for="v-params">Params (B)</label><input id="v-params" type="number" step="0.01"></div>
+       <div class="field"><label for="v-layers">Layers</label><input id="v-layers" type="number"></div>
+       <div class="field"><label for="v-kvh">KV heads</label><input id="v-kvh" type="number"></div>
+       <div class="field"><label for="v-hd">Head dim</label><input id="v-hd" type="number"></div>
+     </div>
+     <div class="ctl" style="margin-top:13px">
+       <div class="field"><label for="v-vram">GPU VRAM (GB)</label><input id="v-vram" type="number" value="24" step="1"></div>
+       <div class="field"><label for="v-util">Memory fraction</label><input id="v-util" type="number" value="0.90" step="0.01" min="0.1" max="0.99"></div>
+       <div class="field"><label for="v-bytes">Bytes per weight</label><input id="v-bytes" type="number" value="2" step="0.5" min="0.5"></div>
+       <div class="field"><label for="v-seq">Tokens per request</label><input id="v-seq" type="number" value="2048" step="128"></div>
+     </div>
+     <div class="readout" style="margin-top:18px">
+       <div><span class="r-k">Weights</span><span class="r-v" id="v-w">—</span><span class="r-sub">GiB</span></div>
+       <div><span class="r-k">KV per token</span><span class="r-v" id="v-per">—</span><span class="r-sub" id="v-per-sub">KiB</span></div>
+       <div><span class="r-k">KV budget</span><span class="r-v" id="v-bud">—</span><span class="r-sub">GiB left over</span></div>
+       <div><span class="r-k">Concurrent requests</span><span class="r-v" id="v-conc">—</span><span class="r-sub" id="v-conc-sub"></span></div>
+     </div>
+     <div class="verdict" id="v-say"></div>`);
+
+  const GIB = 1024 ** 3;
+  const load = name => {
+    const [p, l, k, h] = PRESETS[name];
+    $("v-params").value = p; $("v-layers").value = l;
+    $("v-kvh").value = k; $("v-hd").value = h;
+  };
+
+  const calc = () => {
+    const p = +$("v-params").value * 1e9, L = +$("v-layers").value,
+          kvh = +$("v-kvh").value, hd = +$("v-hd").value,
+          vram = +$("v-vram").value, util = +$("v-util").value,
+          bytes = +$("v-bytes").value, seq = +$("v-seq").value;
+
+    // ~6% of the advertised VRAM is not addressable, and the engine keeps a
+    // workspace for activations, CUDA graphs and fragmentation.
+    const usable = vram * 0.937, workspace = 1.9;
+    const perTok = 2 * L * kvh * hd * 2;          // K and V, always fp16
+    const weights = p * bytes / GIB;
+    const budget = usable * util - weights - workspace;
+    const tokens = budget > 0 ? budget * GIB / perTok : 0;
+    const conc = tokens / Math.max(seq, 1);
+
+    $("v-w").textContent = fmt(weights, 1);
+    $("v-per").textContent = fmt(perTok / 1024);
+    $("v-per-sub").textContent = `KiB · ${fmt(tokens / 1000, 1)}K tokens total`;
+    $("v-bud").textContent = fmt(budget, 1);
+    $("v-bud").className = "r-v" + (budget <= 0 ? " bad" : budget < 2 ? " warn" : "");
+    $("v-conc").textContent = conc >= 1 ? fmt(conc) : conc > 0 ? conc.toFixed(1) : "0";
+    $("v-conc").className = "r-v" + (conc < 1 ? " bad" : conc < 8 ? " warn" : "");
+    $("v-conc-sub").textContent = `at ${fmt(seq)} tokens each`;
+
+    const say = $("v-say");
+    if (budget <= 0) {
+      say.innerHTML = `<b>Will not load.</b> The weights alone need ${fmt(weights, 1)} GiB and
+        the engine is only claiming ${fmt(usable * util, 1)} GiB. Quantize, raise the memory
+        fraction, or pick a smaller model.`;
+    } else if (conc < 1) {
+      say.innerHTML = `<b>Cannot serve even one request this long.</b> The budget holds
+        ${fmt(tokens)} tokens and you asked for ${fmt(seq)}.`;
+    } else if (conc < 8) {
+      say.innerHTML = `<b>Only ${fmt(conc)} requests at a time.</b> There is almost nothing to
+        batch together, so throughput collapses toward serving one request at a time.`;
+    } else {
+      say.innerHTML = `<b>${fmt(conc)} requests at a time.</b> Healthy headroom. Now raise the
+        tokens per request and watch that number fall off a cliff — that cliff, not GPU
+        utilization, is what capacity planning is about.`;
+    }
+  };
+
+  $("v-preset").onchange = () => { load($("v-preset").value); calc(); };
+  ["v-params", "v-layers", "v-kvh", "v-hd", "v-vram", "v-util", "v-bytes", "v-seq"]
+    .forEach(id => { $(id).oninput = calc; });
+  load(Object.keys(PRESETS)[0]);
+  calc();
+}
+
+const ALERTS = [
+  ["QueueBuildingUp", "requests waiting > 20", "Drive 384 concurrent requests", "leading"],
+  ["TTFTSLOBurn", "TTFT p95 > 1s", "384 concurrent, 2048-token prompts", "coincident"],
+  ["DecodeStalling", "ITL p95 > 100ms", "Restart the engine with --enforce-eager", "coincident"],
+  ["KVCacheThrashing", "preemptions rising", "Restart with memory fraction 0.35", "silent"],
+  ["EngineDown", "scrape fails", "Kill the engine process", "hard"],
+];
+
+function toolAlerts(host, w) {
+  host.innerHTML = panel("Prove every alert", "week 5",
+    `<p class="note">An alert you have never watched fire is an alert you do not have.
+       Tick each one only once you have seen it trigger on your own box.</p>
+     <div class="tscroll" style="margin-top:14px"><table class="plain">
+       <thead><tr><th>Alert</th><th>Condition</th><th>How to fire it</th><th>Class</th><th>Proved</th></tr></thead>
+       <tbody>${ALERTS.map((a, i) => `<tr><td><code>${a[0]}</code></td><td>${a[1]}</td>
+         <td>${a[2]}</td><td>${a[3]}</td>
+         <td><input type="checkbox" id="al-${i}" style="min-width:0;width:16px;height:16px"></td></tr>`).join("")}
+       </tbody></table></div>`);
+  const saved = store.get("alerts", {});
+  ALERTS.forEach((_, i) => {
+    const cb = $("al-" + i);
+    cb.checked = !!saved[i];
+    cb.onchange = () => {
+      saved[i] = cb.checked;
+      store.set("alerts", saved);
+      if (ALERTS.every((__, j) => saved[j])) markDone(w.n);
+    };
+  });
+}
+
+function toolFaults(host, w) {
+  host.innerHTML = panel("Fault bank", "week 8",
+    `<p class="note">Have someone else pick one and inject it without telling you which.
+       Diagnose it from the metrics and the engine log alone, then write the postmortem.</p>
+     <div class="tscroll" style="margin-top:14px"><table class="plain">
+       <thead><tr><th>Fault</th><th>Inject with</th><th>What you will see</th></tr></thead><tbody>
+       <tr><td>KV starvation</td><td><code>./labctl serve &lt;model&gt; 4096 0.35</code></td><td>HTTP 200 throughout, latency doubles</td></tr>
+       <tr><td>Silent eager mode</td><td><code>--enforce-eager</code></td><td>decode ~20% slower, nothing logged</td></tr>
+       <tr><td>OOM at load</td><td><code>./labctl serve &lt;model&gt; 32768 0.98</code></td><td>engine never starts</td></tr>
+       <tr><td>Driver pulled</td><td><code>rmmod nvidia_uvm</code></td><td>nvidia-smi fine, CUDA calls fail</td></tr>
+       <tr><td>Self-killing pkill</td><td><code>pkill -f "vllm serve"</code></td><td>exit 0, no output, service dead</td></tr>
+       <tr><td>Disk full</td><td>fill the model cache</td><td>download stalls mid-pull</td></tr>
+       </tbody></table></div>
+     <div class="ctl" style="margin-top:14px">
+       <button id="f-done">I ran an incident and wrote the postmortem</button></div>`);
+  $("f-done").onclick = e => {
+    markDone(w.n);
+    e.target.textContent = "Marked ✓";
+    e.target.disabled = true;
+  };
+}
+
+/* ---- boot ---- */
+(async () => {
+  try {
+    const d = BAKED || await (await fetch("/api/weeks")).json();
+    WEEKS = d.weeks;
+    $("reposub").textContent = "labs: " + d.labs_repo.split("/").pop();
+  } catch { WEEKS = []; }
+  window.addEventListener("hashchange", route);
+  route();
+})();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+# The site is a single pre-built page: build.py bakes the runbooks from the
+# labs repo into dist/index.html, and that output is committed. Netlify has no
+# access to the labs repo, so there is no build step here.
+[build]
+  publish = "dist"
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

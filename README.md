@@ -1,123 +1,68 @@
-# Operating LLM Inference — AI Infrastructure for SREs
+# Operating LLM Inference — course site
 
-Eight weeks, ~40 hours. Takes an experienced SRE from "I can operate Kubernetes"
-to "I can explain, benchmark, scale, and debug a GPU-backed inference service."
+The website for an eight-week course taking experienced SREs from operating
+Kubernetes to debugging a GPU-backed inference service.
 
-**Syllabus (web):** https://claude.ai/code/artifact/8335beb0-798c-4343-9e5a-2f5c8725f495
+**This repo is the site only.** It has no GPU connection, no authentication and
+no server-side logic. The workloads and test scripts students actually run live
+in a separate repo, [`ai-tutorial-labs`](../ai-tutorial-labs), and this site
+renders their runbooks so there is one source of truth rather than two copies
+that drift.
 
-Not MLOps. Not a RAG chatbot. Production inference infrastructure, one coherent
-stack, taught on real hardware, with every lab producing a measurement the
-student has to defend.
-
-## Stack
+## Layout
 
 ```
-CUDA → vLLM → Kubernetes (k3s) → NVIDIA GPU Operator/DCGM → Prometheus → KServe
+console/        the site — a small FastAPI app for local editing
+  index.html      shell and stylesheet
+  app.js          routing, markdown renderer, per-week tools
+  widgets.js      interactive explainers (tokenizer, KV cache, batching)
+  course.py       week list and lab discovery, dependency-free
+  server.py       dev server; reads the labs repo from disk
+build.py        bakes everything into one static page
+dist/           the built page, committed so hosts need no build step
+course/         instructor guide, capstone rubric, prerequisites
 ```
 
-Self-managed k3s, not managed Kubernetes. Managed control planes hide exactly
-the layer Week 4 teaches — watching the GPU Operator install break is the point.
-
-## Running the labs on your own GPU
-
-Nothing here is tied to the box below. The console and both lab scripts take a
-vLLM endpoint and read everything device-specific from the engine, so the course
-works on any GPU that vLLM supports (sm_70+) — your own card, a rented instance,
-or a cloud VM.
+## Editing it
 
 ```bash
-cd console && ./run.sh http://your-gpu-host:8000
+cd console
+./run.sh                 # http://127.0.0.1:8080, live from the labs repo
+HOST=0.0.0.0 ./run.sh    # serve it on your network
+./screen.sh              # same, in a detached screen session
 ```
 
-The reference numbers throughout were measured on the rig below; students should
-expect different ones and be able to explain the difference. That explanation is
-the course.
+The dev server reads the labs repo on every request, so edits to a runbook show
+up on reload.
 
-## Reference hardware
+## Publishing it
 
-| | |
-|---|---|
-| Host | IBM Cloud VPC `gx3-16x80x1l4` |
-| GPU | NVIDIA L4 24 GB, AD104GL, sm_89 — **bf16 native** |
-| Reported VRAM | 23034 MiB (~22.5 GiB addressable) |
-| CPU / RAM | 16 vCPU / 78 GiB |
-| OS | Debian 13 trixie, kernel 6.12.107 |
-| Driver | 615.71.09, CUDA UMD 13.4 |
+```bash
+python3 build.py         # writes dist/index.html
+git add dist && git commit && git push
+```
 
-A VM with GPU passthrough and **root**. Not a notebook. That distinction rules
-out Kaggle, Colab, Lightning and Modal for Weeks 4 and 8 — none of them let you
-load a kernel module, so the GPU Operator, the device plugin and every
-driver-level failure injection are impossible there.
+`build.py` inlines the stylesheet, both scripts and every runbook into a single
+self-contained page — about 90 KB, no external requests except web fonts. Any
+static host will serve it; `netlify.toml` sets the publish directory.
 
-L4 over the originally-planned T4: sm_89 has native bf16 and 24 GB, so lab
-numbers transfer to what students actually run. T4 (sm_75) would have forced
-`--dtype half` and a caveat in every lab.
+The build needs the labs repo. It looks for `../ai-tutorial-labs`, or set
+`LABS_REPO` to point somewhere else. Because the hosting platform has no access
+to that repo, `dist/` is committed rather than built remotely.
 
-### Week 7 — multi-GPU
+## The course
 
-Resize to `gx3-32x160x2l4` for `--tensor-parallel-size 2`. Same VPC, same image.
-
-### MIG
-
-L4 cannot do MIG. Rent a `gx3d` A100 for the few hours Week 4 covers it, then
-drop back. Do not size the plan around it.
-
-## Cost
-
-A GPU VM bills while it is idle. `nvidia-smi` will read **0% utilization** while
-the engine holds 20 GB of VRAM and the card does nothing, so stop the instance
-when you finish for the day.
-
-Rough figures for a single 24 GB card at around $1.30/hour:
-
-| Phase | Hours | Cost |
+| Week | Subject | Needs |
 |---|---|---|
-| Authoring weeks 1–6 | 75 | ~$98 |
-| Week 7, two GPUs | 10 | ~$23 |
-| MIG segment on an A100 | 8 | ~$35 |
-| A cohort of 10–15, paired | 280 | ~$364 |
+| 0 | What you are actually operating | nothing — just read it |
+| 1 | Anatomy of a request | 1 GPU |
+| 2 | VRAM accounting | 1 GPU |
+| 3 | Inside an inference engine | 1 GPU |
+| 4 | Kubernetes GPU platform | 1 GPU, root |
+| 5 | AI-specific observability | 1 GPU + k3s |
+| 6 | Capacity and autoscaling | 1 GPU + k3s |
+| 7 | Distributed inference | 2 GPUs |
+| 8 | Reliability and security | 1 GPU |
 
-Note that Power (ppc64le) hardware cannot run this course at all: NVIDIA
-deprecated ppc64le in CUDA 12.4 and removed it in 12.5, so there is no modern
-vLLM for it.
-
-## Repository
-
-```
-index.html                        published syllabus app
-console/                          live lab console — runs anywhere, any vLLM endpoint
-course/PREREQUISITES.md           self-check before week 1
-course/INSTRUCTOR.md              how to run each week, and what breaks
-course/CAPSTONE.md                rubric + six viable subjects
-labs/week01-inference-request/    decompose.py — queue / prefill / TTFT / ITL
-labs/week02-vram/                 predict → measure → explain the gap
-labs/week03-engine-internals/     saturate.py — find the knee
-labs/week04-gpu-platform/         bare OS → CUDA, with the real failure sequence
-labs/week05-observability/        SLO alert rules, each with a proof injection
-labs/week06-autoscaling/          CPU HPA vs queue HPA, admission control
-labs/week07-distributed/          TP=2 vs 2 replicas on PCIe; collective hangs
-labs/week08-reliability/          fault bank, timed incident, postmortem spec
-```
-
-## What was measured on real hardware
-
-Everything below came off `gpu1`, not from documentation:
-
-| | |
-|---|---|
-| Addressable VRAM | 22.49 GiB (`nvidia-smi` reports 23034 MiB, not 24576) |
-| Workspace overhead | 1.93 GiB — back-solved, not assumed |
-| KV cache | 578,000 tokens @ 141.11× concurrency |
-| VRAM calculator error | **0.01%** against vLLM's own allocation |
-| Cold start to healthy | 110 s (1.5B model, warm local weights) |
-| Week 1 knee | TTFT ×5.3 vs ITL ×1.25 at 64 concurrent — queue-bound |
-| Week 3 knee | concurrency 256, 6,680 tok/s; throughput *falls* past it |
-| Limiting resource at saturation | `max_num_seqs=256`, with KV cache at **9.3%** |
-
-That last row is the course's best single result: the bottleneck is a config
-default, not the GPU and not the memory everyone spent Week 2 budgeting.
-
-## The real exam
-
-> The service is violating its TTFT SLO. Show me where the time and the GPU
-> memory went.
+Weeks are being written one at a time. A week whose runbook does not exist yet
+renders a note saying so rather than failing.

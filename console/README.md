@@ -1,134 +1,63 @@
-# Lab console
+# The site
 
-A web app over the lab. Live engine state, and a sweep runner that finds the
-Week 3 knee while you watch it happen.
+A small FastAPI app for editing the course site locally. It reads the runbooks
+from the labs repo on every request, so a change to a `README.md` there shows up
+on reload.
 
-**It runs wherever you are, against any vLLM endpoint on any GPU.** The console
-holds no knowledge of a particular machine — model name, KV cache size, block
-count and `gpu_memory_utilization` are all read from the engine at runtime.
+It has no GPU connection, no authentication and no tunnel. Everything that
+touches hardware happens in the labs repo, on the student's own machine.
 
 ## Run it
 
 ```bash
-cd console
-./run.sh                                      # engine on this machine
-./run.sh http://gpu-host:8000                 # engine on another machine
-./run.sh http://127.0.0.1:8000 user@gpu-host  # engine via tunnel, device over SSH
+./run.sh                 # http://127.0.0.1:8080
+HOST=0.0.0.0 ./run.sh    # serve it on your network
+PORT=9000 ./run.sh       # somewhere else
+
+./screen.sh              # detached screen session, survives your terminal
+./screen.sh status
+./screen.sh stop
 ```
 
-First run creates `.venv` and installs `requirements.txt`. Then open
-<http://127.0.0.1:8080>.
+First run creates `.venv` and installs `requirements.txt`.
 
-### Leaving it running
-
-`run.sh` dies with your terminal. For a session that outlives it, use
-`screen.sh`, which runs the console — and, when needed, its SSH tunnel — in
-detached `screen` sessions:
+It finds the labs repo as a sibling directory. To point somewhere else:
 
 ```bash
-./screen.sh                              # engine on this machine
-./screen.sh http://gpu-host:8000         # engine reachable directly
-./screen.sh tunnel user@gpu-host         # engine behind SSH; opens the tunnel too
-
-./screen.sh status                       # what is up, and is it answering
-./screen.sh stop                         # stop both
-screen -r lab-console                    # attach (detach again with ctrl-a d)
-screen -r lab-tunnel
+LABS_REPO=~/src/ai-tutorial-labs ./run.sh
 ```
 
-The tunnel session runs its `ssh` in a retry loop with
-`ServerAliveInterval=15`. A dropped link is the thing that actually fails during
-a 90-minute lab, and it reconnects within about five seconds without touching
-the console.
+## Files
 
-### Against a remote GPU
-
-Anything that speaks vLLM's OpenAI API works — your own box, a rented
-RunPod/Vast instance, a cloud VM. If the engine's port is not reachable, tunnel
-it and point the console at the local end:
-
-```bash
-ssh -L 8000:localhost:8000 user@gpu-host
-./run.sh http://127.0.0.1:8000 user@gpu-host
-```
-
-### Device tiles are opt-in, deliberately
-
-VRAM and GPU-utilization tiles need `nvidia-smi`, and the console **cannot infer
-where to run it**. A tunnel makes a remote engine look like `127.0.0.1`, so
-reading `nvidia-smi` locally would report *this* machine's card with numbers
-that look entirely plausible. Building this, the console briefly reported a
-GTX 1080's 8 GiB while actually driving an L4.
-
-So you state the source, or you get no tiles:
-
-| Situation | Flag |
+| | |
 |---|---|
-| Engine on this machine | `GPU_LOCAL=1 ./run.sh` |
-| Engine elsewhere, SSH available | pass `user@host` as the 2nd argument |
-| Neither | omit both — tiles disappear, nothing else changes |
+| `index.html` | shell and the whole stylesheet |
+| `app.js` | routing, markdown renderer, per-week tools |
+| `widgets.js` | interactive explainers for Week 0 |
+| `course.py` | the week list and lab discovery — no dependencies, shared with `build.py` |
+| `server.py` | the dev server |
 
-Everything the labs actually need comes from `/metrics`, so the third row is a
-perfectly good way to run the course.
+## How a week is assembled
 
-### Exposing it
+For week *N* the server looks in the lab directory for:
 
-Default bind is `127.0.0.1`. To serve others:
+- `README.md` — the runbook. Required; without it the week renders as unwritten.
+- `NN-*.md` — optional ordered parts. A long week becomes tabs instead of one
+  long scroll.
+- `CONCEPTS.md`, `GRADING.md` — optional, become their own tabs.
 
-```bash
-HOST=0.0.0.0 PORT=8080 ./run.sh http://127.0.0.1:8000
-```
+## Two conventions worth knowing
 
-A non-loopback bind **mints a token automatically** and prints it (also written
-to `~/console.token`); open `http://host:8080/?t=<token>`. The console drives
-arbitrary load on a billed GPU, and vLLM itself has no authentication — putting
-an open load generator in front of an open engine is the Week 8 lesson, so the
-lab does not model the mistake.
+**`<!-- widget:name -->`** in a runbook mounts an interactive explainer there.
+It is an invisible HTML comment everywhere else the same markdown is read, so
+the labs repo stays a normal readable repo.
 
-On a cloud VM you will also need an inbound rule for the port. On IBM Cloud VPC
-the default security group admits only 22, which is why the tunnel above is the
-path of least resistance.
+**Links between labs** are written as filesystem paths — `../lab00-primer/` —
+so they work on disk and on a git host. The renderer rewrites them to site
+routes, because a browser would otherwise resolve them against the site URL
+and 404.
 
-## What it shows
+## Publishing
 
-**Tiles** — running, waiting, KV%, throughput, preemptions, and device stats
-when available. GPU utilization is labelled a trap on purpose: it reads 0% while
-the engine holds 20 GiB.
-
-**Live charts** — queue, throughput, latency and KV cache over a 120-second
-window. Four separate charts rather than one with two y-axes: tok/s and
-milliseconds do not share a scale, and overlaying them invents a relationship.
-
-**Sweep** — enter concurrency levels, press run, rows stream in one at a time
-over SSE. The knee is detected server-side and marked on the chart. When the
-engine stops admitting work while the KV cache is still mostly free, the verdict
-says so — that inference is computed from the data, not hardcoded to any
-particular `max_num_seqs`.
-
-## Where the numbers come from
-
-| Number | Source |
-|---|---|
-| running, waiting, KV%, preemptions | `/metrics` gauges, read directly |
-| throughput | `generation_tokens_total` delta ÷ elapsed |
-| live TTFT / ITL | histogram `_sum`/`_count` deltas — a true interval mean |
-| sweep percentiles | measured client-side, per request |
-| KV capacity, blocks, util | `vllm:cache_config_info` labels |
-| model name | `/v1/models` |
-| VRAM, util, temp | `nvidia-smi`, only where you said to run it |
-
-## Three bugs worth knowing about
-
-All three were found building this, and all three are silent:
-
-**Prefix-matching metric names.** `vllm:num_requests_waiting` is a prefix of
-`vllm:num_requests_waiting_by_reason`; a `startswith` match reads whichever
-appears last. Match exactly, up to the label brace.
-
-**Gating several peaks on one field.** Tracking the peak sample with
-`if waiting >= peak.waiting` fails whenever the batch fits under `max_num_seqs`:
-waiting stays 0, every sample passes the gate, and the final post-drain sample
-overwrites running and KV with zeros. Track each field's own maximum.
-
-**`pkill -f` matching its own shell.** Never used here — `run.sh` kills by
-pidfile. See Week 8, where this happened three times in one afternoon.
+Editing happens here; publishing is `python3 build.py` in the parent directory,
+which bakes this into a single static page. See the repo README.

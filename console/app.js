@@ -190,6 +190,8 @@ cd ai-tutorial-labs</code></div>
 }
 
 /* ---- a week ---- */
+const BAKED = typeof window !== "undefined" && window.__COURSE__ ? window.__COURSE__ : null;
+
 async function showWeek(n) {
   const meta = WEEKS.find(w => w.n === n);
   $("pagetitle").innerHTML = `Week ${n}${meta ? " &mdash; " + meta.title : ""}` +
@@ -199,8 +201,13 @@ async function showWeek(n) {
 
   let data, res;
   try {
-    res = await fetch(`/api/weeks/${n}`);
-    data = await res.json();
+    if (BAKED) {
+      data = BAKED.detail[n] || null;
+      res = { ok: !!data };
+    } else {
+      res = await fetch(`/api/weeks/${n}`);
+      data = await res.json();
+    }
   } catch {
     $("predict").hidden = true;
     $("body").innerHTML = "<p><b>Could not reach the site's API.</b> Is it still running?</p>";
@@ -437,7 +444,7 @@ function toolFaults(host, w) {
 /* ---- boot ---- */
 (async () => {
   try {
-    const d = await (await fetch("/api/weeks")).json();
+    const d = BAKED || await (await fetch("/api/weeks")).json();
     WEEKS = d.weeks;
     $("reposub").textContent = "labs: " + d.labs_repo.split("/").pop();
   } catch { WEEKS = []; }
