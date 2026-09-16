@@ -8,6 +8,11 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent.parent
 
+# Where the labs live on a git host. The site renders their runbooks, but the
+# files themselves are cloned onto a GPU box, so every link to one has to point
+# here rather than at a path only this machine has.
+LABS_URL = "https://github.com/akshatgit/ai-infa-tutorial-labs"
+
 WEEKS = [
     {"n": 0, "slug": "lab00-primer", "title": "What you are actually operating",
      "needs": "just read it", "tool": None, "predict": None},

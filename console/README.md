@@ -27,6 +27,11 @@ It finds the labs repo as a sibling directory. To point somewhere else:
 LABS_REPO=~/src/ai-tutorial-labs ./run.sh
 ```
 
+That is the checkout it reads. The address it *links to* —
+[`ai-infa-tutorial-labs`](https://github.com/akshatgit/ai-infa-tutorial-labs) —
+is `LABS_URL` in `course.py`, and it is what the clone command on the front page
+and every link to a lab script resolve against.
+
 ## Files
 
 | | |

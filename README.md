@@ -5,7 +5,9 @@ Kubernetes to debugging a GPU-backed inference service.
 
 **This repo is the site only.** It has no GPU connection, no authentication and
 no server-side logic. The workloads and test scripts students actually run live
-in a separate repo, [`ai-tutorial-labs`](../ai-tutorial-labs), and this site
+in a separate repo,
+[`ai-infa-tutorial-labs`](https://github.com/akshatgit/ai-infa-tutorial-labs),
+and this site
 renders their runbooks so there is one source of truth rather than two copies
 that drift.
 
@@ -46,9 +48,19 @@ git add dist && git commit && git push
 self-contained page — about 90 KB, no external requests except web fonts. Any
 static host will serve it; `netlify.toml` sets the publish directory.
 
-The build needs the labs repo. It looks for `../ai-tutorial-labs`, or set
-`LABS_REPO` to point somewhere else. Because the hosting platform has no access
-to that repo, `dist/` is committed rather than built remotely.
+The build needs the labs repo checked out next to this one:
+
+```bash
+git clone https://github.com/akshatgit/ai-infa-tutorial-labs.git ../ai-tutorial-labs
+```
+
+It looks for `../ai-tutorial-labs`, or set `LABS_REPO` to point somewhere else.
+Because the hosting platform has no access to that repo, `dist/` is committed
+rather than built remotely.
+
+Two different things point at the labs, and they are set separately: `LABS_REPO`
+is the checkout the build *reads*, and `LABS_URL` in `console/course.py` is the
+address the finished page *links to*. Change the latter if the repo moves.
 
 ## The course
 

@@ -23,7 +23,7 @@ CONSOLE = HERE / "console"
 DIST = HERE / "dist"
 
 sys.path.insert(0, str(CONSOLE))
-from course import WEEKS, find_labs  # noqa: E402
+from course import WEEKS, find_labs, LABS_URL  # noqa: E402
 
 LABS = Path(os.environ.get("LABS_REPO") or find_labs()).resolve()
 
@@ -72,7 +72,8 @@ def main():
     built = sum(1 for w in weeks if w["available"])
 
     shell = (CONSOLE / "index.html").read_text()
-    payload = json.dumps({"weeks": weeks, "labs_repo": LABS.name, "detail": detail},
+    payload = json.dumps({"weeks": weeks, "labs_repo": LABS.name,
+                          "labs_url": LABS_URL, "detail": detail},
                          ensure_ascii=False)
     # The runbooks contain "<!-- widget:... -->". Inside a <script> block that
     # sequence flips the HTML tokenizer into escaped-script-data state and the

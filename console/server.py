@@ -16,7 +16,7 @@ import os
 import re
 from pathlib import Path
 
-from course import WEEKS, find_labs
+from course import WEEKS, find_labs, LABS_URL
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
@@ -36,6 +36,7 @@ async def weeks():
         "weeks": [{**w, "available": (LABS_DIR / w["slug"] / "README.md").exists()}
                   for w in WEEKS],
         "labs_repo": str(LABS_DIR),
+        "labs_url": LABS_URL,
     }
 
 

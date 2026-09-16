@@ -21,6 +21,7 @@ function mdToHtml(md) {
     .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, href) => {
       const to = siteHref(href);
+      if (to.tab) return `<a href="#" data-tab="${to.tab}">${text}</a>`;
       return to.external
         ? `<a href="${to.href}" target="_blank" rel="noopener">${text}</a>`
         : `<a href="${to.href}">${text}</a>`;
@@ -104,9 +105,28 @@ function siteHref(href) {
     if (w) return { href: `#week/${w.n}`, external: false };
     return { href: `#week/${parseInt(m[2], 10)}`, external: false };
   }
-  // A file inside the labs repo: nothing to serve it from, so point at the
-  // repo path rather than producing a link that silently 404s.
+  // Another part of the week already on screen: it is a tab a few pixels away,
+  // so switch to it rather than sending the reader out to the git host.
+  const part = LABS_PARTS.findIndex(x => x.file === href.replace(/^\.\//, ""));
+  if (part >= 0) return { href: "#", external: false, tab: "part" + part };
+
+  // A file inside the labs repo — a script, a manifest. The site has nothing
+  // to serve it from, so point at the file on the git host. Without a URL to
+  // point at there is no honest link to make, so leave it as plain text.
+  if (LABS_URL) return { href: labsFile(href), external: true };
   return { href: "#", external: false, file: href };
+}
+
+/* Runbook links are written relative to their own lab directory so they work
+   on disk. Resolve one against that directory to get its path in the repo. */
+function labsFile(href) {
+  const parts = LABS_SLUG ? LABS_SLUG.split("/") : [];
+  for (const seg of href.split("/")) {
+    if (seg === "" || seg === ".") continue;
+    if (seg === "..") parts.pop();
+    else parts.push(seg);
+  }
+  return `${LABS_URL}/blob/main/${parts.join("/")}`;
 }
 
 /* ================= progress, per browser ================= */
@@ -116,6 +136,10 @@ const store = {
 };
 
 let WEEKS = [];
+let LABS_URL = "";     // the labs on a git host; filled in at boot
+let LABS_SLUG = "";    // the lab directory whose runbook is on screen
+let LABS_PARTS = [];   // that week's NN-*.md parts, which render as tabs
+let showTab = null;    // set by renderTabs, so a link can switch tabs
 
 function renderNav() {
   const done = store.get("done", {});
@@ -159,7 +183,7 @@ function showHome() {
          Every week asks you to predict a number, measure it on a real GPU, and
          explain the gap between the two.</p>
       <p>This site is the brief. The measuring happens on your own box, through the
-         labs repo.</p>
+         <a href="${LABS_URL}" target="_blank" rel="noopener">labs repo</a>.</p>
       <div class="progress">${WEEKS.map(w =>
         `<i class="${done[w.n] ? "on" : ""}" title="Week ${w.n}"></i>`).join("")}</div>
       <p class="prog-label">${n} of ${WEEKS.length} weeks complete</p>
@@ -174,9 +198,11 @@ function showHome() {
         <p>Any NVIDIA card of compute capability 7.0 or newer, with root access.
            A rented instance is fine; a hosted notebook is not.</p></div>
       <div class="step"><span class="num">STEP 2</span><h3>Clone the labs</h3>
-        <p>The workloads and test scripts live in their own repo.</p>
-        <code>git clone &lt;labs-repo&gt;
-cd ai-tutorial-labs</code></div>
+        <p>The workloads and test scripts live in
+           <a href="${LABS_URL}" target="_blank" rel="noopener">their own repo</a>
+           &mdash; clone it onto the GPU box, not onto your laptop.</p>
+        <code>git clone ${LABS_URL}.git
+cd ${LABS_URL.split("/").pop()}</code></div>
       <div class="step"><span class="num">STEP 3</span><h3>Check, then set up</h3>
         <p><code>check</code> changes nothing and tells you what is missing.</p>
         <code>./labctl check
@@ -194,6 +220,7 @@ const BAKED = typeof window !== "undefined" && window.__COURSE__ ? window.__COUR
 
 async function showWeek(n) {
   const meta = WEEKS.find(w => w.n === n);
+  LABS_SLUG = meta ? meta.slug : "";
   $("pagetitle").innerHTML = `Week ${n}${meta ? " &mdash; " + meta.title : ""}` +
     (meta ? `<span class="needs">${meta.needs}</span>` : "");
   $("body").innerHTML = "<p>Loading&hellip;</p>";
@@ -255,6 +282,7 @@ function renderPredict(w) {
    as tabs rather than making the reader hunt for them. */
 function renderTabs(w) {
   const docs = w.docs || {};
+  LABS_PARTS = w.parts || [];
   // A week split into parts shows those as the tabs; its README is the index.
   const tabs = (w.parts && w.parts.length)
     ? w.parts.map((p, i) => ["part" + i, `${i + 1}. ${p.title}`, p.markdown])
@@ -278,6 +306,7 @@ function renderTabs(w) {
     document.querySelectorAll("#tabs .tab").forEach(b => b.classList.toggle("on", b.dataset.k === k));
   };
   document.querySelectorAll("#tabs .tab").forEach(b => { b.onclick = () => show(b.dataset.k); });
+  showTab = show;
   show(tabs[0][0]);
 }
 
@@ -446,8 +475,18 @@ function toolFaults(host, w) {
   try {
     const d = BAKED || await (await fetch("/api/weeks")).json();
     WEEKS = d.weeks;
-    $("reposub").textContent = "labs: " + d.labs_repo.split("/").pop();
+    LABS_URL = d.labs_url || "";
+    $("reposub").innerHTML = LABS_URL
+      ? `labs: <a href="${LABS_URL}" target="_blank" rel="noopener">${
+          LABS_URL.replace(/^https?:\/\/(www\.)?github\.com\//, "")}</a>`
+      : "labs: " + d.labs_repo.split("/").pop();
   } catch { WEEKS = []; }
+  document.addEventListener("click", e => {
+    const a = e.target.closest && e.target.closest("a[data-tab]");
+    if (!a) return;
+    e.preventDefault();
+    if (showTab) showTab(a.dataset.tab);
+  });
   window.addEventListener("hashchange", route);
   route();
 })();
