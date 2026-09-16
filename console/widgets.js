@@ -111,7 +111,10 @@ WIDGETS.loop = el => {
         <div class="ctx" id="lp-ctx"></div>
 
         <p class="w-sub" style="margin-top:18px">Its KV cache &mdash; one column per token, one row per layer</p>
-        <div class="kvgrid" id="lp-grid"></div>
+        <div class="kvwrap" id="lp-wrap">
+          <div class="kvgrid" id="lp-grid"></div>
+          <div class="kvtip" id="lp-tip" hidden></div>
+        </div>
         <div class="kv-legend" style="margin-top:9px">
           <span><i class="sw kvp"></i>cached from the prompt</span>
           <span><i class="sw kvg"></i>cached as it generates</span>
@@ -136,15 +139,19 @@ WIDGETS.loop = el => {
           is ever freed until the request ends.</p>
         <p class="w-foot">Twenty-eight rows because this model has twenty-eight layers, and
           every layer keeps its own key and value for every token. That is where the 28 KiB
-          per token comes from.</p>
+          per token comes from. <b>Hover any part of the grid</b> &mdash; running, paused or
+          idle &mdash; to see which token and layer a block belongs to and what it holds.</p>
       </div>
     </div>`;
 
   const promptToks = tokenize(PROMPT);
   const TOTAL = promptToks.length + NEXT.length;
+  const KV_PER_CELL = KV_PER_TOKEN / LAYERS;   // one layer's key+value for one token
   let made = [], timer = null;
+  let curPhase = "idle", hover = null;         // hover survives redraws
 
   const draw = phase => {
+    curPhase = phase;
     const tok = t => t.replace(/ /g, "\u00b7");
     el.querySelector("#lp-ctx").innerHTML =
       promptToks.map(t => `<span class="chip prompt">${tok(t)}</span>`).join("") +
@@ -176,7 +183,79 @@ WIDGETS.loop = el => {
     el.querySelector("#lp-kv").textContent = filled * KV_PER_TOKEN;
     el.querySelector("#lp-step").textContent = `step ${made.length}`;
     el.querySelector("#lp-phase").textContent = phase;
+    paint();
   };
+
+  /* ---- what one block is ------------------------------------------------
+     A cell is a single layer's key and value for a single token. A column is
+     all 28 layers for that token — the 28 KiB the stats line counts. Hovering
+     reads current state, so it stays correct while paused or mid-generation. */
+
+  const cellsPerToken = () => promptToks.length + made.length;
+
+  const tipHTML = (c, l) => {
+    const isPrompt = c < promptToks.length;
+    const gi = c - promptToks.length;                 // index among generated
+    const filled = curPhase === "idle" ? 0 : cellsPerToken();
+    const written = c < filled;
+    const when = isPrompt ? "prefill" : `decode step ${gi + 1}`;
+    const text = isPrompt ? promptToks[c] : (written ? made[gi] : null);
+
+    const head = text === null
+      ? `<div class="kvtip-tok pending">not generated yet</div>`
+      : `<div class="kvtip-tok">${text.replace(/ /g, "\u00b7")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;")}</div>`;
+
+    const state = written
+      ? `<div class="kvtip-row on">written during <b>${when}</b>, kept until the request ends</div>`
+      : `<div class="kvtip-row off">empty &mdash; will be written at <b>${when}</b></div>`;
+
+    return head
+      + `<div class="kvtip-row">token <b>${c + 1}</b> of ${TOTAL}`
+      + ` &middot; layer <b>${l + 1}</b> of ${LAYERS}</div>`
+      + `<div class="kvtip-row">this block holds one key + one value vector`
+      + ` &mdash; <b>${KV_PER_CELL} KiB</b></div>`
+      + `<div class="kvtip-row">whole column: <b>${KV_PER_TOKEN} KiB</b> for this token</div>`
+      + state;
+  };
+
+  const paint = () => {
+    const grid = el.querySelector("#lp-grid");
+    const tip = el.querySelector("#lp-tip");
+    const wrap = el.querySelector("#lp-wrap");
+    grid.classList.toggle("dim", !!hover);
+    if (!hover) { tip.hidden = true; return; }
+
+    Array.from(grid.children).forEach((row, l) =>
+      Array.from(row.children).forEach((cell, c) => {
+        cell.classList.toggle("col", c === hover.c);
+        cell.classList.toggle("cell", c === hover.c && l === hover.l);
+      }));
+
+    tip.hidden = false;
+    tip.innerHTML = tipHTML(hover.c, hover.l);
+    const maxL = wrap.clientWidth - tip.offsetWidth - 2;
+    tip.style.left = `${Math.max(0, Math.min(hover.x + 14, maxL))}px`;
+    tip.style.top = `${hover.y + 16}px`;
+  };
+
+  const wrap = el.querySelector("#lp-wrap");
+  wrap.addEventListener("mousemove", e => {
+    const grid = el.querySelector("#lp-grid");
+    if (!grid.children.length) return;
+    // Derive the cell from pointer position rather than the event target: the
+    // cells are 3px tall, so every pixel should map to one instead of leaving
+    // dead gaps between them.
+    const gb = grid.getBoundingClientRect();
+    const wb = wrap.getBoundingClientRect();
+    const l = Math.max(0, Math.min(LAYERS - 1,
+      Math.floor((e.clientY - gb.top) / (gb.height / LAYERS))));
+    const c = Math.max(0, Math.min(TOTAL - 1,
+      Math.floor((e.clientX - gb.left) / (gb.width / TOTAL))));
+    hover = { c, l, x: e.clientX - wb.left, y: e.clientY - wb.top };
+    paint();
+  });
+  wrap.addEventListener("mouseleave", () => { hover = null; paint(); });
 
   const stop = () => {
     clearInterval(timer); timer = null;
